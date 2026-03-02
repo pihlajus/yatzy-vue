@@ -17,7 +17,7 @@ export enum Category {
 }
 
 export const CATEGORY_NAMES: Record<Category, string> = {
-  [Category.Ones]: 'Ykkoset',
+  [Category.Ones]: 'Ykköset',
   [Category.Twos]: 'Kakkoset',
   [Category.Threes]: 'Kolmoset',
   [Category.Fours]: 'Neloset',
@@ -26,10 +26,10 @@ export const CATEGORY_NAMES: Record<Category, string> = {
   [Category.Pair]: 'Pari',
   [Category.TwoPairs]: 'Kaksi paria',
   [Category.ThreeOfAKind]: 'Kolme samaa',
-  [Category.FourOfAKind]: 'Nelja samaa',
+  [Category.FourOfAKind]: 'Neljä samaa',
   [Category.SmallStraight]: 'Pikku suora',
   [Category.LargeStraight]: 'Iso suora',
-  [Category.FullHouse]: 'Tayskasi',
+  [Category.FullHouse]: 'Täyskäsi',
   [Category.Chance]: 'Sattuma',
   [Category.Yatzy]: 'Yatzy',
 }
@@ -66,3 +66,10 @@ export interface Die {
   value: number
   locked: boolean
 }
+
+export interface Player {
+  name: string
+  scores: Map<Category, number>
+}
+
+export type GamePhase = 'setup' | 'playing' | 'finished'

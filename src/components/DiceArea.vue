@@ -26,7 +26,7 @@ const game = useGameStore()
         :disabled="game.rollsLeft <= 0 || game.isGameOver"
         @click="game.roll()"
       >
-        Heita {{ game.hasRolled ? `(${game.rollsLeft})` : '' }}
+        Heitä {{ game.hasRolled ? `(${game.rollsLeft})` : '' }}
       </button>
     </div>
 
@@ -35,6 +35,12 @@ const game = useGameStore()
     </p>
     <p v-if="game.hasRolled && game.rollsLeft === 0" class="text-sm text-slate-500">
       Valitse kategoria tuloskortista
+    </p>
+    <p
+      v-if="game.players.length > 1 && game.currentPlayer"
+      class="text-xs text-slate-400 mt-1"
+    >
+      {{ game.currentPlayer.name }}
     </p>
   </div>
 </template>

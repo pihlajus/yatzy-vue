@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
   type Die,
+  type Player,
+  type GamePhase,
   Category,
   ALL_CATEGORIES,
   UPPER_CATEGORIES,
@@ -20,56 +22,91 @@ function createDice(): Die[] {
   return Array.from({ length: 5 }, () => ({ value: 1, locked: false }))
 }
 
+function createPlayer(name: string): Player {
+  return { name, scores: new Map() }
+}
+
 export const useGameStore = defineStore('game', () => {
   // State
   const dice = ref<Die[]>(createDice())
   const rollsLeft = ref(MAX_ROLLS)
-  const scores = ref<Map<Category, number>>(new Map())
-  const currentRound = ref(1)
+  const players = ref<Player[]>([])
+  const currentPlayerIndex = ref(0)
+  const phase = ref<GamePhase>('setup')
+  const turnsPlayed = ref(0)
 
   // Getters
   const diceValues = computed(() => dice.value.map((d) => d.value))
 
   const hasRolled = computed(() => rollsLeft.value < MAX_ROLLS)
 
+  const currentPlayer = computed(() => players.value[currentPlayerIndex.value])
+
+  const currentRound = computed(() =>
+    players.value.length > 0
+      ? Math.floor(turnsPlayed.value / players.value.length) + 1
+      : 1,
+  )
+
   const potentialScores = computed(() => {
-    if (!hasRolled.value) return new Map<Category, number>()
+    if (!hasRolled.value || !currentPlayer.value) return new Map<Category, number>()
     const result = new Map<Category, number>()
     for (const cat of ALL_CATEGORIES) {
-      if (!scores.value.has(cat)) {
+      if (!currentPlayer.value.scores.has(cat)) {
         result.set(cat, calcScore(diceValues.value, cat))
       }
     }
     return result
   })
 
-  const upperSum = computed(() => {
-    let sum = 0
-    for (const cat of UPPER_CATEGORIES) {
-      sum += scores.value.get(cat) ?? 0
-    }
-    return sum
-  })
-
-  const upperBonus = computed(() =>
-    upperSum.value >= UPPER_BONUS_LIMIT ? UPPER_BONUS_POINTS : 0,
+  const isGameOver = computed(() =>
+    players.value.length > 0 &&
+    players.value.every((p) => p.scores.size >= NUM_ROUNDS),
   )
 
-  const lowerSum = computed(() => {
+  function upperSum(player: Player): number {
+    let sum = 0
+    for (const cat of UPPER_CATEGORIES) {
+      sum += player.scores.get(cat) ?? 0
+    }
+    return sum
+  }
+
+  function upperBonus(player: Player): number {
+    return upperSum(player) >= UPPER_BONUS_LIMIT ? UPPER_BONUS_POINTS : 0
+  }
+
+  function lowerSum(player: Player): number {
     let sum = 0
     for (const cat of ALL_CATEGORIES) {
       if (!UPPER_CATEGORIES.includes(cat)) {
-        sum += scores.value.get(cat) ?? 0
+        sum += player.scores.get(cat) ?? 0
       }
     }
     return sum
+  }
+
+  function totalScore(player: Player): number {
+    return upperSum(player) + upperBonus(player) + lowerSum(player)
+  }
+
+  const winner = computed(() => {
+    if (!isGameOver.value || players.value.length === 0) return null
+    return players.value.reduce((best, p) =>
+      totalScore(p) > totalScore(best) ? p : best,
+    )
   })
 
-  const totalScore = computed(() => upperSum.value + upperBonus.value + lowerSum.value)
-
-  const isGameOver = computed(() => currentRound.value > NUM_ROUNDS)
-
   // Actions
+  function startGame(names: string[]) {
+    players.value = names.map(createPlayer)
+    currentPlayerIndex.value = 0
+    turnsPlayed.value = 0
+    dice.value = createDice()
+    rollsLeft.value = MAX_ROLLS
+    phase.value = 'playing'
+  }
+
   function roll() {
     if (rollsLeft.value <= 0 || isGameOver.value) return
 
@@ -88,39 +125,55 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function selectCategory(category: Category) {
-    if (!hasRolled.value || scores.value.has(category) || isGameOver.value) return
+    const player = currentPlayer.value
+    if (!hasRolled.value || !player || player.scores.has(category) || isGameOver.value) return
 
     const score = calcScore(diceValues.value, category)
-    scores.value.set(category, score)
-    currentRound.value++
+    player.scores.set(category, score)
+    turnsPlayed.value++
 
-    // Reset for next round
+    // Reset dice for next turn
     for (const die of dice.value) {
       die.locked = false
     }
     rollsLeft.value = MAX_ROLLS
+
+    // Advance to next player or end game
+    if (isGameOver.value) {
+      phase.value = 'finished'
+    } else {
+      currentPlayerIndex.value = (currentPlayerIndex.value + 1) % players.value.length
+    }
   }
 
   function newGame() {
+    phase.value = 'setup'
+    players.value = []
+    currentPlayerIndex.value = 0
+    turnsPlayed.value = 0
     dice.value = createDice()
     rollsLeft.value = MAX_ROLLS
-    scores.value = new Map()
-    currentRound.value = 1
   }
 
   return {
     dice,
     rollsLeft,
-    scores,
-    currentRound,
+    players,
+    currentPlayerIndex,
+    phase,
+    turnsPlayed,
     diceValues,
     hasRolled,
+    currentPlayer,
+    currentRound,
     potentialScores,
+    isGameOver,
+    winner,
     upperSum,
     upperBonus,
     lowerSum,
     totalScore,
-    isGameOver,
+    startGame,
     roll,
     toggleLock,
     selectCategory,
