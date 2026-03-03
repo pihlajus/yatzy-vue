@@ -1,10 +1,28 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { useGameStore } from './stores/game'
 import PlayerSetup from './components/PlayerSetup.vue'
 import DiceArea from './components/DiceArea.vue'
 import Scorecard from './components/Scorecard.vue'
+import HighScores from './components/HighScores.vue'
+import { savePlayerScores } from './firebase'
 
 const game = useGameStore()
+const scoresSaved = ref(false)
+
+watch(() => game.phase, async (phase) => {
+  if (phase === 'finished') {
+    scoresSaved.value = false
+    try {
+      await savePlayerScores(
+        game.players.map((p) => ({ name: p.name, score: game.totalScore(p) })),
+      )
+    } catch (e) {
+      console.error('Failed to save scores:', e)
+    }
+    scoresSaved.value = true
+  }
+})
 </script>
 
 <template>
@@ -15,10 +33,12 @@ const game = useGameStore()
       </header>
 
       <!-- Setup phase -->
-      <PlayerSetup
-        v-if="game.phase === 'setup'"
-        @start="game.startGame($event)"
-      />
+      <template v-if="game.phase === 'setup'">
+        <PlayerSetup @start="game.startGame($event)" />
+        <div class="mt-6">
+          <HighScores />
+        </div>
+      </template>
 
       <!-- Playing phase -->
       <template v-if="game.phase === 'playing'">
@@ -63,6 +83,11 @@ const game = useGameStore()
         <section class="flex justify-center mb-6">
           <Scorecard />
         </section>
+
+        <div class="mb-6">
+          <p v-if="!scoresSaved" class="text-slate-500 text-sm">Tallennetaan...</p>
+          <HighScores v-if="scoresSaved" />
+        </div>
 
         <button
           class="px-6 py-3 bg-green-600 text-white font-bold rounded-lg text-lg
