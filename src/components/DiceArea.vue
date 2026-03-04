@@ -1,8 +1,16 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useGameStore } from '../stores/game'
 import Die from './Die.vue'
 
 const game = useGameStore()
+const rolling = ref(false)
+
+function roll() {
+  game.roll()
+  rolling.value = true
+  setTimeout(() => { rolling.value = false }, 900)
+}
 </script>
 
 <template>
@@ -13,6 +21,7 @@ const game = useGameStore()
         :key="i"
         :value="die.value"
         :locked="die.locked"
+        :rolling="rolling"
         :can-toggle="game.hasRolled && game.rollsLeft > 0"
         @toggle="game.toggleLock(i)"
       />
@@ -24,7 +33,7 @@ const game = useGameStore()
                hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed
                transition-colors"
         :disabled="game.rollsLeft <= 0 || game.isGameOver"
-        @click="game.roll()"
+        @click="roll()"
       >
         Heitä {{ game.hasRolled ? `(${game.rollsLeft})` : '' }}
       </button>
