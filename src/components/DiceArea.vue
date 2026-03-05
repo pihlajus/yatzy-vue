@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useGameStore } from '../stores/game'
+import { useSound } from '../composables/useSound'
 import Die from './Die.vue'
 
 const game = useGameStore()
+const { playRoll } = useSound()
 const rolling = ref(false)
 
 function roll() {
   game.roll()
+  playRoll()
   rolling.value = true
   setTimeout(() => { rolling.value = false }, 900)
 }

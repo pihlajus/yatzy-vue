@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useGameStore } from '../stores/game'
+import { useSound } from '../composables/useSound'
 import {
   Category,
   CATEGORY_NAMES,
@@ -9,6 +10,7 @@ import {
 } from '../types/game'
 
 const game = useGameStore()
+const { playClick } = useSound()
 
 function isActive(player: Player): boolean {
   return player === game.currentPlayer
@@ -26,6 +28,12 @@ function displayScore(cat: Category, player: Player): string {
     return String(game.potentialScores.get(cat))
   }
   return ''
+}
+
+function select(cat: Category) {
+  if (!game.currentPlayer || !isSelectable(cat, game.currentPlayer)) return
+  playClick()
+  game.selectCategory(cat)
 }
 
 function scoreClass(cat: Category, player: Player): string {
@@ -72,7 +80,7 @@ function scoreClass(cat: Category, player: Player): string {
               isActive(player) ? 'bg-blue-50' : '',
               isSelectable(cat, player) ? 'cursor-pointer hover:bg-blue-100' : '',
             ]"
-            @click="isSelectable(cat, player) && game.selectCategory(cat)"
+            @click="isSelectable(cat, player) && select(cat)"
           >
             {{ displayScore(cat, player) }}
           </td>
@@ -144,7 +152,7 @@ function scoreClass(cat: Category, player: Player): string {
               isActive(player) ? 'bg-blue-50' : '',
               isSelectable(cat, player) ? 'cursor-pointer hover:bg-blue-100' : '',
             ]"
-            @click="isSelectable(cat, player) && game.selectCategory(cat)"
+            @click="isSelectable(cat, player) && select(cat)"
           >
             {{ displayScore(cat, player) }}
           </td>
