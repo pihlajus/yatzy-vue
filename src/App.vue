@@ -21,8 +21,10 @@ const screenShake = ref(false)
 
 watch(() => game.lastYatzy, (isYatzy) => {
   if (isYatzy) {
-    screenShake.value = true
-    setTimeout(() => { screenShake.value = false }, 500)
+    setTimeout(() => {
+      screenShake.value = true
+      setTimeout(() => { screenShake.value = false }, 500)
+    }, 1000)
   }
 })
 

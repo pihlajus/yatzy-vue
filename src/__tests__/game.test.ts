@@ -293,16 +293,19 @@ describe('game store', () => {
   })
 
   describe('yatzy event', () => {
-    it('sets lastYatzy when scoring yatzy 50', () => {
+    it('sets lastYatzy when roll produces 5-of-a-kind and yatzy not scored', () => {
       const game = useGameStore()
       game.startGame(['Jussi'])
-      for (const die of game.dice) die.value = 6
-      game.rollsLeft = 2
-      game.selectCategory(Category.Yatzy)
+      // Lock all dice to same value so roll detects yatzy
+      for (const die of game.dice) {
+        die.value = 6
+        die.locked = true
+      }
+      game.roll()
       expect(game.lastYatzy).toBe(true)
     })
 
-    it('does not set lastYatzy when yatzy scores 0', () => {
+    it('does not set lastYatzy when dice are not all same', () => {
       const game = useGameStore()
       game.startGame(['Jussi'])
       game.dice[0]!.value = 1
@@ -310,18 +313,42 @@ describe('game store', () => {
       game.dice[2]!.value = 3
       game.dice[3]!.value = 4
       game.dice[4]!.value = 5
-      game.rollsLeft = 2
-      game.selectCategory(Category.Yatzy)
+      for (const die of game.dice) die.locked = true
+      game.roll()
       expect(game.lastYatzy).toBe(false)
     })
 
-    it('clears lastYatzy on next roll', () => {
+    it('does not set lastYatzy when yatzy category already scored', () => {
       const game = useGameStore()
       game.startGame(['Jussi'])
+      // Score yatzy first
       for (const die of game.dice) die.value = 6
       game.rollsLeft = 2
       game.selectCategory(Category.Yatzy)
+      // Now roll again with all same - should not trigger
+      for (const die of game.dice) {
+        die.value = 5
+        die.locked = true
+      }
+      game.roll()
+      expect(game.lastYatzy).toBe(false)
+    })
+
+    it('clears lastYatzy on next roll when yatzy already scored', () => {
+      const game = useGameStore()
+      game.startGame(['Jussi'])
+      for (const die of game.dice) {
+        die.value = 6
+        die.locked = true
+      }
+      game.roll()
       expect(game.lastYatzy).toBe(true)
+      // Score yatzy, then roll again - should not re-trigger
+      game.selectCategory(Category.Yatzy)
+      for (const die of game.dice) {
+        die.value = 5
+        die.locked = true
+      }
       game.roll()
       expect(game.lastYatzy).toBe(false)
     })

@@ -132,6 +132,14 @@ export const useGameStore = defineStore('game', () => {
       }
     }
     rollsLeft.value--
+
+    // Detect yatzy in dice immediately after roll
+    const values = dice.value.map((d) => d.value)
+    const allSame = values.every((v) => v === values[0])
+    const yatzyNotScored = !currentPlayer.value?.scores.has(Category.Yatzy)
+    if (allSame && yatzyNotScored) {
+      lastYatzy.value = true
+    }
   }
 
   function toggleLock(index: number) {
@@ -156,7 +164,6 @@ export const useGameStore = defineStore('game', () => {
     }
 
     player.scores.set(category, score)
-    lastYatzy.value = category === Category.Yatzy && score === 50
     turnsPlayed.value++
 
     // Reset dice for next turn
