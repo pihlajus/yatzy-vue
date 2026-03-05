@@ -1,18 +1,48 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useGameStore } from '../stores/game'
 import { useSound } from '../composables/useSound'
+import { useShake } from '../composables/useShake'
 import Die from './Die.vue'
 
 const game = useGameStore()
 const { playRoll } = useSound()
 const rolling = ref(false)
+const shakePermissionNeeded = ref(false)
+
+const canRoll = computed(() => game.rollsLeft > 0 && !game.isGameOver)
 
 function roll() {
   game.roll()
   playRoll()
   rolling.value = true
   setTimeout(() => { rolling.value = false }, 900)
+}
+
+const {
+  supported: shakeSupported,
+  permissionGranted: shakeGranted,
+  requestPermission: requestShakePermission,
+} = useShake(() => {
+  if (canRoll.value && !rolling.value) roll()
+})
+
+onMounted(() => {
+  if (shakeSupported) {
+    const DME = DeviceMotionEvent as unknown as {
+      requestPermission?: () => Promise<string>
+    }
+    if (DME.requestPermission) {
+      shakePermissionNeeded.value = true
+    } else {
+      requestShakePermission()
+    }
+  }
+})
+
+async function grantShake() {
+  const ok = await requestShakePermission()
+  if (ok) shakePermissionNeeded.value = false
 }
 </script>
 
@@ -41,6 +71,14 @@ function roll() {
         Heitä {{ game.hasRolled ? `(${game.rollsLeft})` : '' }}
       </button>
     </div>
+
+    <button
+      v-if="shakePermissionNeeded"
+      class="text-xs text-blue-500 underline"
+      @click="grantShake"
+    >
+      Salli ravistus
+    </button>
 
     <p v-if="game.hasRolled && game.rollsLeft > 0" class="text-sm text-slate-500">
       Klikkaa noppaa lukitaksesi
