@@ -35,10 +35,23 @@ export const useGameStore = defineStore('game', () => {
   const phase = ref<GamePhase>('setup')
   const turnsPlayed = ref(0)
 
+  interface UndoSnapshot {
+    playerIndex: number
+    category: Category
+    score: number
+    diceValues: number[]
+    diceLocks: boolean[]
+    rollsLeft: number
+  }
+
+  const undoSnapshot = ref<UndoSnapshot | null>(null)
+
   // Getters
   const diceValues = computed(() => dice.value.map((d) => d.value))
 
   const hasRolled = computed(() => rollsLeft.value < MAX_ROLLS)
+
+  const canUndo = computed(() => undoSnapshot.value !== null && !hasRolled.value)
 
   const currentPlayer = computed(() => players.value[currentPlayerIndex.value])
 
@@ -109,6 +122,7 @@ export const useGameStore = defineStore('game', () => {
 
   function roll() {
     if (rollsLeft.value <= 0 || isGameOver.value) return
+    undoSnapshot.value = null
 
     for (const die of dice.value) {
       if (!die.locked) {
@@ -129,6 +143,16 @@ export const useGameStore = defineStore('game', () => {
     if (!hasRolled.value || !player || player.scores.has(category) || isGameOver.value) return
 
     const score = calcScore(diceValues.value, category)
+
+    undoSnapshot.value = {
+      playerIndex: currentPlayerIndex.value,
+      category,
+      score,
+      diceValues: dice.value.map((d) => d.value),
+      diceLocks: dice.value.map((d) => d.locked),
+      rollsLeft: rollsLeft.value,
+    }
+
     player.scores.set(category, score)
     turnsPlayed.value++
 
@@ -146,6 +170,30 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function undoLastCategory() {
+    const snap = undoSnapshot.value
+    if (!snap || hasRolled.value) return
+
+    const player = players.value[snap.playerIndex]
+    if (!player) return
+
+    player.scores.delete(snap.category)
+    turnsPlayed.value--
+    currentPlayerIndex.value = snap.playerIndex
+    rollsLeft.value = snap.rollsLeft
+
+    for (let i = 0; i < dice.value.length; i++) {
+      dice.value[i]!.value = snap.diceValues[i]!
+      dice.value[i]!.locked = snap.diceLocks[i]!
+    }
+
+    if (phase.value === 'finished') {
+      phase.value = 'playing'
+    }
+
+    undoSnapshot.value = null
+  }
+
   function restartGame() {
     for (const player of players.value) {
       player.scores = new Map()
@@ -154,6 +202,7 @@ export const useGameStore = defineStore('game', () => {
     turnsPlayed.value = 0
     dice.value = createDice()
     rollsLeft.value = MAX_ROLLS
+    undoSnapshot.value = null
     phase.value = 'playing'
   }
 
@@ -164,6 +213,7 @@ export const useGameStore = defineStore('game', () => {
     turnsPlayed.value = 0
     dice.value = createDice()
     rollsLeft.value = MAX_ROLLS
+    undoSnapshot.value = null
   }
 
   return {
@@ -190,5 +240,7 @@ export const useGameStore = defineStore('game', () => {
     toggleLock,
     selectCategory,
     newGame,
+    canUndo,
+    undoLastCategory,
   }
 })

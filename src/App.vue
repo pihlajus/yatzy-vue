@@ -97,6 +97,15 @@ watch(() => game.phase, async (phase) => {
         <section class="flex justify-center">
           <Scorecard />
         </section>
+
+        <button
+          v-if="game.canUndo"
+          class="mt-3 px-4 py-2 bg-slate-200 text-slate-600 rounded-lg text-sm
+                 hover:bg-slate-300 transition-colors"
+          @click="game.undoLastCategory()"
+        >
+          Kumoa viimeinen valinta
+        </button>
       </template>
 
       <!-- Finished phase -->
