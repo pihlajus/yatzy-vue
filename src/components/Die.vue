@@ -50,14 +50,19 @@ function setRotationForValue(val: number, animate: boolean) {
     return
   }
 
-  // Add 2-4 full rotations with random direction per axis
-  const extraRotationsX = (2 + Math.floor(Math.random() * 3)) * 360
-  const extraRotationsY = (2 + Math.floor(Math.random() * 3)) * 360
+  // Normalize current rotation to find nearest equivalent target,
+  // then add 2-4 full spins forward so transform always changes
+  const spinsX = (2 + Math.floor(Math.random() * 3)) * 360
+  const spinsY = (2 + Math.floor(Math.random() * 3)) * 360
   const dirX = Math.random() > 0.5 ? 1 : -1
   const dirY = Math.random() > 0.5 ? 1 : -1
 
-  currentX.value = target.x + extraRotationsX * dirX
-  currentY.value = target.y + extraRotationsY * dirY
+  // Snap target to nearest equivalent angle from current position, then add spins
+  const nearestX = currentX.value - ((currentX.value - target.x) % 360)
+  const nearestY = currentY.value - ((currentY.value - target.y) % 360)
+
+  currentX.value = nearestX + spinsX * dirX
+  currentY.value = nearestY + spinsY * dirY
 
   // Random duration 0.5-0.8s
   duration.value = 0.5 + Math.random() * 0.3

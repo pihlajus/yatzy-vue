@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
+    "test": "vitest run",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache"
@@ -19,6 +20,7 @@
     "vue": "^3.5.29"
   },
   "devDependencies": {
+    "@pinia/testing": "^1.0.3",
     "@tailwindcss/vite": "^4.2.1",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.11.0",
@@ -29,12 +31,14 @@
     "eslint-plugin-oxlint": "~1.50.0",
     "eslint-plugin-vue": "~10.8.0",
     "jiti": "^2.6.1",
+    "jsdom": "^28.1.0",
     "npm-run-all2": "^8.0.4",
     "oxlint": "~1.50.0",
     "tailwindcss": "^4.2.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.6",
+    "vitest": "^4.0.18",
     "vue-tsc": "^3.2.5"
   },
   "engines": {

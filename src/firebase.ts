@@ -9,9 +9,9 @@ const app = initializeApp({
 
 export const db = getFirestore(app)
 
-export async function savePlayerScores(players: { name: string; score: number }[]) {
+export async function savePlayerScores(players: { name: string; score: number }[]): Promise<string[]> {
   const col = collection(db, 'highscores')
-  await Promise.all(
+  const refs = await Promise.all(
     players.map((p) =>
       addDoc(col, {
         playerName: p.name,
@@ -20,4 +20,5 @@ export async function savePlayerScores(players: { name: string; score: number }[
       }),
     ),
   )
+  return refs.map((r) => r.id)
 }
