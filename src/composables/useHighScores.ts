@@ -30,5 +30,16 @@ export function useHighScores() {
     }
   }
 
-  return { scores, isLoading, error, loadTopScores }
+  function isInTop10(playerName: string, playerScore: number): boolean {
+    return scores.value.some(
+      (s) => s.playerName === playerName && s.score === playerScore,
+    )
+  }
+
+  function isNumberOne(playerName: string, playerScore: number): boolean {
+    const first = scores.value[0]
+    return !!first && first.playerName === playerName && first.score === playerScore
+  }
+
+  return { scores, isLoading, error, loadTopScores, isInTop10, isNumberOne }
 }

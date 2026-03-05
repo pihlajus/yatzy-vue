@@ -146,6 +146,17 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
+  function restartGame() {
+    for (const player of players.value) {
+      player.scores = new Map()
+    }
+    currentPlayerIndex.value = 0
+    turnsPlayed.value = 0
+    dice.value = createDice()
+    rollsLeft.value = MAX_ROLLS
+    phase.value = 'playing'
+  }
+
   function newGame() {
     phase.value = 'setup'
     players.value = []
@@ -174,6 +185,7 @@ export const useGameStore = defineStore('game', () => {
     lowerSum,
     totalScore,
     startGame,
+    restartGame,
     roll,
     toggleLock,
     selectCategory,
