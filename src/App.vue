@@ -7,20 +7,24 @@ import Scorecard from './components/Scorecard.vue'
 import HighScores from './components/HighScores.vue'
 import { savePlayerScores } from './firebase'
 import { useHighScores } from './composables/useHighScores'
+import { useSettings } from './composables/useSettings'
 
 const game = useGameStore()
 const scoresSaved = ref(false)
 const celebrating = ref(false)
 const isTop1 = ref(false)
-const { loadTopScores, isInTop10, isNumberOne } = useHighScores()
+const savedDocIds = ref<string[]>([])
+const { loadTopScores, hasId, isNumberOne } = useHighScores()
+const { soundEnabled, probabilitiesEnabled, toggleSound, toggleProbabilities } = useSettings()
 
 watch(() => game.phase, async (phase) => {
   if (phase === 'finished') {
     scoresSaved.value = false
     celebrating.value = false
     isTop1.value = false
+    savedDocIds.value = []
     try {
-      await savePlayerScores(
+      savedDocIds.value = await savePlayerScores(
         game.players.map((p) => ({ name: p.name, score: game.totalScore(p) })),
       )
     } catch (e) {
@@ -29,10 +33,10 @@ watch(() => game.phase, async (phase) => {
     await loadTopScores()
     scoresSaved.value = true
 
-    const madeTop10 = game.players.some((p) => isInTop10(p.name, game.totalScore(p)))
-    if (madeTop10) {
+    const top10Ids = savedDocIds.value.filter(hasId)
+    if (top10Ids.length > 0) {
       celebrating.value = true
-      isTop1.value = game.players.some((p) => isNumberOne(p.name, game.totalScore(p)))
+      isTop1.value = top10Ids.some(isNumberOne)
     }
   }
 })
@@ -43,6 +47,27 @@ watch(() => game.phase, async (phase) => {
     <div class="max-w-lg mx-auto" :class="{ 'max-w-2xl': game.players.length > 2 }">
       <header class="text-center mb-6">
         <h1 class="text-3xl font-bold text-slate-800">Yatzy</h1>
+        <div class="flex justify-center gap-2 mt-1">
+          <button
+            class="p-1.5 rounded-full transition-colors"
+            :class="soundEnabled ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'"
+            :title="soundEnabled ? 'Äänet päällä' : 'Äänet pois'"
+            @click="toggleSound"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+              <path v-if="soundEnabled" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+              <line v-if="!soundEnabled" x1="23" y1="9" x2="17" y2="15" />
+              <line v-if="!soundEnabled" x1="17" y1="9" x2="23" y2="15" />
+            </svg>
+          </button>
+          <button
+            class="p-1.5 rounded-full transition-colors text-xs font-bold w-8 h-8 flex items-center justify-center"
+            :class="probabilitiesEnabled ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400'"
+            :title="probabilitiesEnabled ? 'Todennäköisyydet päällä' : 'Todennäköisyydet pois'"
+            @click="toggleProbabilities"
+          >%</button>
+        </div>
       </header>
 
       <!-- Setup phase -->
@@ -127,7 +152,7 @@ watch(() => game.phase, async (phase) => {
 
         <div class="mb-6">
           <p v-if="!scoresSaved" class="text-slate-500 text-sm">Tallennetaan...</p>
-          <HighScores v-if="scoresSaved" />
+          <HighScores v-if="scoresSaved" :highlight-ids="savedDocIds" />
         </div>
 
         <div class="flex gap-3 justify-center">
