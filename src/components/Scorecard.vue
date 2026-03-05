@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 import { useSound } from '../composables/useSound'
+import { useSettings } from '../composables/useSettings'
+import { calcProbabilities } from '../probability'
 import {
   Category,
   CATEGORY_NAMES,
@@ -11,6 +14,23 @@ import {
 
 const game = useGameStore()
 const { playClick } = useSound()
+const { probabilitiesEnabled } = useSettings()
+
+const probabilities = computed(() => {
+  if (!probabilitiesEnabled.value || !game.hasRolled || game.rollsLeft === 0) {
+    return new Map<Category, number>()
+  }
+  const locked = game.dice.filter((d) => d.locked).map((d) => d.value)
+  const free = game.dice.filter((d) => !d.locked).map((d) => d.value)
+  return calcProbabilities(free, locked, game.rollsLeft)
+})
+
+function probDisplay(cat: Category, player: Player): string {
+  if (!isActive(player) || player.scores.has(cat)) return ''
+  const p = probabilities.value.get(cat)
+  if (p === undefined) return ''
+  return `${Math.round(p * 100)}%`
+}
 
 function isActive(player: Player): boolean {
   return player === game.currentPlayer
@@ -70,7 +90,12 @@ function scoreClass(cat: Category, player: Player): string {
           :key="cat"
           class="border-b border-slate-100"
         >
-          <td class="py-1.5 pl-2">{{ CATEGORY_NAMES[cat] }}</td>
+          <td class="py-1.5 pl-2">
+            {{ CATEGORY_NAMES[cat] }}
+            <span v-if="game.currentPlayer && probDisplay(cat, game.currentPlayer)" class="text-xs text-slate-400 ml-1">
+              {{ probDisplay(cat, game.currentPlayer) }}
+            </span>
+          </td>
           <td
             v-for="player in game.players"
             :key="player.name"
@@ -142,7 +167,12 @@ function scoreClass(cat: Category, player: Player): string {
           :key="cat"
           class="border-b border-slate-100"
         >
-          <td class="py-1.5 pl-2">{{ CATEGORY_NAMES[cat] }}</td>
+          <td class="py-1.5 pl-2">
+            {{ CATEGORY_NAMES[cat] }}
+            <span v-if="game.currentPlayer && probDisplay(cat, game.currentPlayer)" class="text-xs text-slate-400 ml-1">
+              {{ probDisplay(cat, game.currentPlayer) }}
+            </span>
+          </td>
           <td
             v-for="player in game.players"
             :key="player.name"
