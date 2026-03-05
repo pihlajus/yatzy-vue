@@ -34,6 +34,7 @@ export const useGameStore = defineStore('game', () => {
   const currentPlayerIndex = ref(0)
   const phase = ref<GamePhase>('setup')
   const turnsPlayed = ref(0)
+  const lastYatzy = ref(false)
 
   interface UndoSnapshot {
     playerIndex: number
@@ -122,6 +123,7 @@ export const useGameStore = defineStore('game', () => {
 
   function roll() {
     if (rollsLeft.value <= 0 || isGameOver.value) return
+    lastYatzy.value = false
     undoSnapshot.value = null
 
     for (const die of dice.value) {
@@ -154,6 +156,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     player.scores.set(category, score)
+    lastYatzy.value = category === Category.Yatzy && score === 50
     turnsPlayed.value++
 
     // Reset dice for next turn
@@ -202,6 +205,7 @@ export const useGameStore = defineStore('game', () => {
     turnsPlayed.value = 0
     dice.value = createDice()
     rollsLeft.value = MAX_ROLLS
+    lastYatzy.value = false
     undoSnapshot.value = null
     phase.value = 'playing'
   }
@@ -213,6 +217,7 @@ export const useGameStore = defineStore('game', () => {
     turnsPlayed.value = 0
     dice.value = createDice()
     rollsLeft.value = MAX_ROLLS
+    lastYatzy.value = false
     undoSnapshot.value = null
   }
 
@@ -240,6 +245,7 @@ export const useGameStore = defineStore('game', () => {
     toggleLock,
     selectCategory,
     newGame,
+    lastYatzy,
     canUndo,
     undoLastCategory,
   }

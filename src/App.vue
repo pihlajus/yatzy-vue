@@ -17,6 +17,15 @@ const savedDocIds = ref<string[]>([])
 const { loadTopScores, hasId, isNumberOne } = useHighScores()
 const { soundEnabled, probabilitiesEnabled, toggleSound, toggleProbabilities } = useSettings()
 
+const screenShake = ref(false)
+
+watch(() => game.lastYatzy, (isYatzy) => {
+  if (isYatzy) {
+    screenShake.value = true
+    setTimeout(() => { screenShake.value = false }, 500)
+  }
+})
+
 watch(() => game.phase, async (phase) => {
   if (phase === 'finished') {
     scoresSaved.value = false
@@ -43,7 +52,7 @@ watch(() => game.phase, async (phase) => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-50 py-6 px-4">
+  <div class="min-h-screen bg-slate-50 py-6 px-4" :class="{ 'screen-shake': screenShake }">
     <div class="max-w-lg mx-auto" :class="{ 'max-w-2xl': game.players.length > 2 }">
       <header class="text-center mb-6">
         <h1 class="text-3xl font-bold text-slate-800">Yatzy</h1>
@@ -302,5 +311,18 @@ watch(() => game.phase, async (phase) => {
 @keyframes star-spin {
   from { transform: translateX(-50%) rotate(0deg); }
   to { transform: translateX(-50%) rotate(360deg); }
+}
+
+.screen-shake {
+  animation: shake 0.5s ease-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-4px) rotate(-0.5deg); }
+  30% { transform: translateX(4px) rotate(0.5deg); }
+  50% { transform: translateX(-3px); }
+  70% { transform: translateX(3px); }
+  90% { transform: translateX(-1px); }
 }
 </style>

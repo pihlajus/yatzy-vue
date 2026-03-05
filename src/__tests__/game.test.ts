@@ -291,4 +291,39 @@ describe('game store', () => {
       expect(game.canUndo).toBe(false)
     })
   })
+
+  describe('yatzy event', () => {
+    it('sets lastYatzy when scoring yatzy 50', () => {
+      const game = useGameStore()
+      game.startGame(['Jussi'])
+      for (const die of game.dice) die.value = 6
+      game.rollsLeft = 2
+      game.selectCategory(Category.Yatzy)
+      expect(game.lastYatzy).toBe(true)
+    })
+
+    it('does not set lastYatzy when yatzy scores 0', () => {
+      const game = useGameStore()
+      game.startGame(['Jussi'])
+      game.dice[0]!.value = 1
+      game.dice[1]!.value = 2
+      game.dice[2]!.value = 3
+      game.dice[3]!.value = 4
+      game.dice[4]!.value = 5
+      game.rollsLeft = 2
+      game.selectCategory(Category.Yatzy)
+      expect(game.lastYatzy).toBe(false)
+    })
+
+    it('clears lastYatzy on next roll', () => {
+      const game = useGameStore()
+      game.startGame(['Jussi'])
+      for (const die of game.dice) die.value = 6
+      game.rollsLeft = 2
+      game.selectCategory(Category.Yatzy)
+      expect(game.lastYatzy).toBe(true)
+      game.roll()
+      expect(game.lastYatzy).toBe(false)
+    })
+  })
 })
