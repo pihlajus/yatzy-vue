@@ -18,12 +18,12 @@ onMounted(loadTopScores)
 </script>
 
 <template>
-  <div class="bg-white border border-slate-200 rounded-lg p-4">
-    <h2 class="text-lg font-bold text-slate-800 mb-3">Top 10</h2>
+  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
+    <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Top 10</h2>
 
-    <p v-if="isLoading" class="text-slate-500 text-sm">Ladataan tuloksia...</p>
+    <p v-if="isLoading" class="text-slate-500 dark:text-slate-400 text-sm">Ladataan tuloksia...</p>
 
-    <p v-else-if="error" class="text-red-600 text-sm">{{ error }}</p>
+    <p v-else-if="error" class="text-red-600 dark:text-red-400 text-sm">{{ error }}</p>
 
     <p v-else-if="scores.length === 0" class="text-slate-400 text-sm">Ei tuloksia vielä</p>
 
@@ -34,10 +34,10 @@ onMounted(loadTopScores)
         class="flex justify-between text-sm px-2 py-1 rounded"
         :class="[
           isHighlighted(entry.id)
-            ? 'highlight-row bg-green-100 font-bold text-green-900 ring-2 ring-green-400'
+            ? 'highlight-row bg-green-100 dark:bg-green-900/40 font-bold text-green-900 dark:text-green-300 ring-2 ring-green-400'
             : i < 3
-              ? 'bg-amber-50 font-semibold text-amber-900'
-              : 'text-slate-700',
+              ? 'bg-amber-50 dark:bg-amber-900/30 font-semibold text-amber-900 dark:text-amber-300'
+              : 'text-slate-700 dark:text-slate-300',
         ]"
       >
         <span>{{ i + 1 }}. {{ entry.playerName }}</span>

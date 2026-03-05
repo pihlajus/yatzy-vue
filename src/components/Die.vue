@@ -107,7 +107,7 @@ watch(() => props.value, (newVal) => {
         <svg viewBox="0 0 100 100" class="w-full h-full">
           <rect
             x="2" y="2" width="96" height="96" rx="16"
-            :class="locked ? 'fill-amber-100 stroke-amber-500' : 'fill-white stroke-slate-400'"
+            :class="locked ? 'fill-amber-100 stroke-amber-500' : 'fill-white dark:fill-slate-200 stroke-slate-400 dark:stroke-slate-500'"
             stroke-width="3"
           />
           <circle

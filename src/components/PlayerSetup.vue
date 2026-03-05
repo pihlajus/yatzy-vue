@@ -23,10 +23,10 @@ function start() {
 
 <template>
   <div class="max-w-sm mx-auto">
-    <h2 class="text-xl font-bold text-slate-800 mb-4 text-center">Uusi peli</h2>
+    <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4 text-center">Uusi peli</h2>
 
     <div class="mb-6">
-      <label class="block text-sm font-semibold text-slate-600 mb-2">Pelaajien määrä</label>
+      <label class="block text-sm font-semibold text-slate-600 dark:text-slate-300 mb-2">Pelaajien määrä</label>
       <div class="flex gap-2">
         <button
           v-for="n in 4"
@@ -34,7 +34,7 @@ function start() {
           class="w-12 h-12 rounded-lg font-bold text-lg transition-colors"
           :class="playerCount === n
             ? 'bg-blue-600 text-white'
-            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'"
           @click="playerCount = n"
         >
           {{ n }}
@@ -48,7 +48,8 @@ function start() {
           v-model="names[i - 1]"
           type="text"
           :placeholder="defaultNames[i - 1]"
-          class="w-full px-3 py-2 border border-slate-300 rounded-lg
+          class="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg
+                 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200
                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           maxlength="20"
           @keydown.enter="start"

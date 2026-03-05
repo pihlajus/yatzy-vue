@@ -99,15 +99,15 @@ async function grantShake() {
       Salli ravistus
     </button>
 
-    <p v-if="game.hasRolled && game.rollsLeft > 0" class="text-sm text-slate-500">
+    <p v-if="game.hasRolled && game.rollsLeft > 0" class="text-sm text-slate-500 dark:text-slate-400">
       Klikkaa noppaa lukitaksesi
     </p>
-    <p v-if="game.hasRolled && game.rollsLeft === 0" class="text-sm text-slate-500">
+    <p v-if="game.hasRolled && game.rollsLeft === 0" class="text-sm text-slate-500 dark:text-slate-400">
       Valitse kategoria tuloskortista
     </p>
     <p
       v-if="game.players.length > 1 && game.currentPlayer"
-      class="text-xs text-slate-400 mt-1"
+      class="text-xs text-slate-400 dark:text-slate-500 mt-1"
     >
       {{ game.currentPlayer.name }}
     </p>

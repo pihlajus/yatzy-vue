@@ -11,10 +11,17 @@ function saveBool(key: string, value: boolean): void {
 
 const soundEnabled = ref(false)
 const probabilitiesEnabled = ref(false)
+const darkMode = ref(false)
+
+function applyDarkMode(enabled: boolean) {
+  document.documentElement.classList.toggle('dark', enabled)
+}
 
 export function useSettings() {
   soundEnabled.value = loadBool('yatzy-sound', false)
   probabilitiesEnabled.value = loadBool('yatzy-probabilities', false)
+  darkMode.value = loadBool('yatzy-dark', false)
+  applyDarkMode(darkMode.value)
 
   function toggleSound() {
     soundEnabled.value = !soundEnabled.value
@@ -26,5 +33,11 @@ export function useSettings() {
     saveBool('yatzy-probabilities', probabilitiesEnabled.value)
   }
 
-  return { soundEnabled, probabilitiesEnabled, toggleSound, toggleProbabilities }
+  function toggleDarkMode() {
+    darkMode.value = !darkMode.value
+    saveBool('yatzy-dark', darkMode.value)
+    applyDarkMode(darkMode.value)
+  }
+
+  return { soundEnabled, probabilitiesEnabled, darkMode, toggleSound, toggleProbabilities, toggleDarkMode }
 }
