@@ -1,6 +1,6 @@
 import { ref, onUnmounted } from 'vue'
 
-const THRESHOLD = 15
+const THRESHOLD = 12
 const COOLDOWN_MS = 1000
 
 export function useShake(onShake: () => void) {
@@ -9,12 +9,16 @@ export function useShake(onShake: () => void) {
   const permissionGranted = ref(false)
 
   function handleMotion(e: DeviceMotionEvent) {
-    const acc = e.accelerationIncludingGravity
+    // Prefer acceleration (without gravity) if available
+    const acc = e.acceleration?.x != null ? e.acceleration : e.accelerationIncludingGravity
     if (!acc) return
-    const total = Math.sqrt(
-      (acc.x ?? 0) ** 2 + (acc.y ?? 0) ** 2 + (acc.z ?? 0) ** 2,
-    )
-    if (total - 9.8 > THRESHOLD && Date.now() - lastShake > COOLDOWN_MS) {
+    const x = acc.x ?? 0
+    const y = acc.y ?? 0
+    const z = acc.z ?? 0
+    const total = Math.sqrt(x * x + y * y + z * z)
+    // If using accelerationIncludingGravity, subtract gravity baseline
+    const effective = e.acceleration?.x != null ? total : Math.abs(total - 9.8)
+    if (effective > THRESHOLD && Date.now() - lastShake > COOLDOWN_MS) {
       lastShake = Date.now()
       onShake()
     }
