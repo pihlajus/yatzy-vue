@@ -19,6 +19,21 @@ const { loadTopScores, hasId, isNumberOne } = useHighScores()
 const { soundEnabled, probabilitiesEnabled, darkMode, toggleSound, toggleProbabilities, toggleDarkMode } = useSettings()
 
 const screenShake = ref(false)
+const confirmAction = ref<'restart' | 'newGame' | 'quit' | null>(null)
+
+function confirmAndRun(action: 'restart' | 'newGame' | 'quit') {
+  if (confirmAction.value === action) {
+    confirmAction.value = null
+    if (action === 'restart') game.restartGame()
+    else game.newGame()
+  } else {
+    confirmAction.value = action
+  }
+}
+
+function cancelConfirm() {
+  confirmAction.value = null
+}
 
 watch(() => game.lastYatzy, (isYatzy) => {
   if (isYatzy) {
@@ -134,14 +149,26 @@ watch(() => game.phase, async (phase) => {
           <Scorecard />
         </section>
 
-        <button
-          v-if="game.canUndo"
-          class="mt-3 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm
-                 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
-          @click="game.undoLastCategory()"
-        >
-          Kumoa viimeinen valinta
-        </button>
+        <div class="flex gap-2 mt-3">
+          <button
+            v-if="game.canUndo"
+            class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm
+                   hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+            @click="game.undoLastCategory()"
+          >
+            Kumoa viimeinen valinta
+          </button>
+          <button
+            class="px-4 py-2 rounded-lg text-sm transition-colors"
+            :class="confirmAction === 'quit'
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600'"
+            @click="confirmAndRun('quit')"
+            @blur="cancelConfirm"
+          >
+            {{ confirmAction === 'quit' ? 'Oletko varma?' : 'Lopeta peli' }}
+          </button>
+        </div>
       </template>
 
       <!-- Finished phase -->
@@ -205,18 +232,24 @@ watch(() => game.phase, async (phase) => {
 
         <div class="flex gap-3 justify-center">
           <button
-            class="px-6 py-3 bg-green-600 dark:bg-green-700 text-white font-bold rounded-lg text-lg
-                   hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
-            @click="game.restartGame()"
+            class="px-6 py-3 font-bold rounded-lg text-lg transition-colors"
+            :class="confirmAction === 'restart'
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-green-600 dark:bg-green-700 text-white hover:bg-green-700 dark:hover:bg-green-600'"
+            @click="confirmAndRun('restart')"
+            @blur="cancelConfirm"
           >
-            Pelaa uudelleen
+            {{ confirmAction === 'restart' ? 'Oletko varma?' : 'Pelaa uudelleen' }}
           </button>
           <button
-            class="px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-lg
-                   hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
-            @click="game.newGame()"
+            class="px-6 py-3 font-bold rounded-lg text-lg transition-colors"
+            :class="confirmAction === 'newGame'
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'"
+            @click="confirmAndRun('newGame')"
+            @blur="cancelConfirm"
           >
-            Vaihda pelaajia
+            {{ confirmAction === 'newGame' ? 'Oletko varma?' : 'Vaihda pelaajia' }}
           </button>
         </div>
       </div>

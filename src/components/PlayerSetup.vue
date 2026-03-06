@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+
+const STORAGE_KEY = 'yatzy_players'
 
 const emit = defineEmits<{
   start: [names: string[]]
@@ -10,6 +12,19 @@ const names = ref(['', '', '', ''])
 
 const defaultNames = ['Pelaaja 1', 'Pelaaja 2', 'Pelaaja 3', 'Pelaaja 4']
 
+onMounted(() => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      const data = JSON.parse(saved) as { count: number; names: string[] }
+      playerCount.value = data.count
+      for (let i = 0; i < data.names.length && i < 4; i++) {
+        names.value[i] = data.names[i] ?? ''
+      }
+    }
+  } catch { /* ignore corrupt data */ }
+})
+
 const resolvedNames = computed(() =>
   names.value
     .slice(0, playerCount.value)
@@ -17,6 +32,10 @@ const resolvedNames = computed(() =>
 )
 
 function start() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    count: playerCount.value,
+    names: names.value.slice(0, playerCount.value),
+  }))
   emit('start', resolvedNames.value)
 }
 </script>
