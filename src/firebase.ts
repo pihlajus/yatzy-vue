@@ -36,6 +36,10 @@ export function clearPendingScores() {
 }
 
 export async function savePlayerScores(players: { name: string; score: number }[]): Promise<string[]> {
+  if (!navigator.onLine) {
+    queueScores(players)
+    return []
+  }
   try {
     const col = collection(db, 'highscores')
     const refs = await Promise.all(
@@ -56,7 +60,7 @@ export async function savePlayerScores(players: { name: string; score: number }[
 
 export async function flushScoreQueue(): Promise<void> {
   const pending = getPendingScores()
-  if (pending.length === 0) return
+  if (pending.length === 0 || !navigator.onLine) return
 
   const failed: QueuedScore[] = []
   for (const entry of pending) {
