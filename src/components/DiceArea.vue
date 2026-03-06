@@ -28,7 +28,7 @@ function roll() {
   game.roll()
   playRoll()
   rolling.value = true
-  setTimeout(() => { rolling.value = false }, 900)
+  setTimeout(() => { rolling.value = false }, 1100)
 }
 
 const {
