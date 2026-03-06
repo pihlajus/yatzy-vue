@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from './stores/game'
 import PlayerSetup from './components/PlayerSetup.vue'
 import DiceArea from './components/DiceArea.vue'
@@ -34,6 +34,13 @@ function confirmAndRun(action: 'restart' | 'newGame' | 'quit') {
 function cancelConfirm() {
   confirmAction.value = null
 }
+
+function onScoresFlushed() {
+  loadTopScores()
+  scoreQueued.value = false
+}
+onMounted(() => window.addEventListener('scores-flushed', onScoresFlushed))
+onUnmounted(() => window.removeEventListener('scores-flushed', onScoresFlushed))
 
 watch(() => game.lastYatzy, (isYatzy) => {
   if (isYatzy) {

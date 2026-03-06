@@ -80,9 +80,13 @@ export async function flushScoreQueue(): Promise<void> {
     }
   }
 
+  const flushed = pending.length - failed.length
   if (failed.length > 0) {
     localStorage.setItem(QUEUE_KEY, JSON.stringify(failed))
   } else {
     clearPendingScores()
+  }
+  if (flushed > 0) {
+    window.dispatchEvent(new Event('scores-flushed'))
   }
 }
