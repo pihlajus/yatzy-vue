@@ -6,6 +6,7 @@ const props = defineProps<{
   locked: boolean
   canToggle: boolean
   rolling: boolean
+  dropIndex: number
 }>()
 
 defineEmits<{
@@ -35,6 +36,8 @@ const currentX = ref(0)
 const currentY = ref(0)
 const duration = ref(0)
 const hasRolled = ref(false)
+const dropping = ref(false)
+const dropVars = ref<Record<string, string>>({})
 
 const cubeStyle = computed(() => ({
   transform: `rotateX(${currentX.value}deg) rotateY(${currentY.value}deg)`,
@@ -77,6 +80,27 @@ watch(() => props.rolling, (isRolling) => {
   if (isRolling && !props.locked) {
     hasRolled.value = true
     setRotationForValue(props.value, true)
+
+    const delay = props.dropIndex * 30 + Math.random() * 60
+    const dropDuration = 500 + Math.random() * 200
+    const dropHeight = 150 + Math.random() * 100
+    const bounce1 = 20 + Math.random() * 15
+    const bounce2 = 8 + Math.random() * 7
+    const wobbleDeg = 3 + Math.random() * 5
+    const wobbleDir = Math.random() > 0.5 ? 1 : -1
+
+    dropVars.value = {
+      '--drop-duration': `${dropDuration}ms`,
+      '--drop-height': `${dropHeight}px`,
+      '--bounce-1': `${bounce1}px`,
+      '--bounce-2': `${bounce2}px`,
+      '--wobble-deg': `${wobbleDeg * wobbleDir}deg`,
+    }
+
+    setTimeout(() => {
+      dropping.value = true
+      setTimeout(() => { dropping.value = false }, dropDuration)
+    }, delay)
   }
 })
 
@@ -93,7 +117,9 @@ watch(() => props.value, (newVal) => {
     :class="{
       'hover:scale-110 transition-transform': canToggle,
       'scale-95': locked,
+      'die-dropping': dropping,
     }"
+    :style="dropping ? dropVars : {}"
     :disabled="!canToggle"
     @click="$emit('toggle')"
   >
@@ -164,5 +190,49 @@ watch(() => props.value, (newVal) => {
   .die-container {
     --half: 40px;
   }
+}
+
+@keyframes die-drop {
+  0% {
+    transform: translateY(calc(var(--drop-height) * -1)) scale(0.8);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  45% {
+    transform: translateY(0) scale(1);
+  }
+  55% {
+    transform: translateY(calc(var(--bounce-1) * -1)) scale(1.02);
+  }
+  70% {
+    transform: translateY(0) scale(1);
+  }
+  80% {
+    transform: translateY(calc(var(--bounce-2) * -1)) scale(1.01);
+  }
+  90% {
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.die-dropping {
+  animation: die-drop var(--drop-duration) ease-in forwards;
+}
+
+@keyframes die-wobble {
+  0% { transform: rotateZ(0deg); }
+  25% { transform: rotateZ(var(--wobble-deg)); }
+  50% { transform: rotateZ(0deg); }
+  75% { transform: rotateZ(calc(var(--wobble-deg) * -0.6)); }
+  100% { transform: rotateZ(0deg); }
+}
+
+.die-dropping .die-cube {
+  animation: die-wobble var(--drop-duration) ease-out;
 }
 </style>

@@ -74,6 +74,7 @@ async function grantShake() {
         :value="die.value"
         :locked="die.locked"
         :rolling="rolling"
+        :drop-index="i"
         :can-toggle="game.hasRolled && game.rollsLeft > 0"
         @toggle="game.toggleLock(i)"
       />
