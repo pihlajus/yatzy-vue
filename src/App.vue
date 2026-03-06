@@ -11,6 +11,7 @@ import { useSettings } from './composables/useSettings'
 
 const game = useGameStore()
 const scoresSaved = ref(false)
+const scoreQueued = ref(false)
 const celebrating = ref(false)
 const isTop1 = ref(false)
 const savedDocIds = ref<string[]>([])
@@ -31,16 +32,21 @@ watch(() => game.lastYatzy, (isYatzy) => {
 watch(() => game.phase, async (phase) => {
   if (phase === 'finished') {
     scoresSaved.value = false
+    scoreQueued.value = false
     celebrating.value = false
     isTop1.value = false
     savedDocIds.value = []
-    try {
-      savedDocIds.value = await savePlayerScores(
-        game.players.map((p) => ({ name: p.name, score: game.totalScore(p) })),
-      )
-    } catch (e) {
-      console.error('Failed to save scores:', e)
+
+    savedDocIds.value = await savePlayerScores(
+      game.players.map((p) => ({ name: p.name, score: game.totalScore(p) })),
+    )
+
+    if (savedDocIds.value.length === 0) {
+      scoreQueued.value = true
+      scoresSaved.value = true
+      return
     }
+
     await loadTopScores()
     scoresSaved.value = true
 
@@ -191,7 +197,10 @@ watch(() => game.phase, async (phase) => {
 
         <div class="mb-6">
           <p v-if="!scoresSaved" class="text-slate-500 dark:text-slate-400 text-sm">Tallennetaan...</p>
-          <HighScores v-if="scoresSaved" :highlight-ids="savedDocIds" />
+          <p v-else-if="scoreQueued" class="text-amber-600 dark:text-amber-400 text-sm">
+            Ei verkkoyhteyttä -- pisteet lähetetään kun yhteys palaa
+          </p>
+          <HighScores v-if="scoresSaved && !scoreQueued" :highlight-ids="savedDocIds" />
         </div>
 
         <div class="flex gap-3 justify-center">
