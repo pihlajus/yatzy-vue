@@ -123,28 +123,30 @@ watch(() => props.value, (newVal) => {
     :disabled="!canToggle"
     @click="$emit('toggle')"
   >
-    <div class="die-cube" :style="cubeStyle">
-      <div
-        v-for="face in 6"
-        :key="face"
-        class="face"
-        :class="`face-${face}`"
-      >
-        <svg viewBox="0 0 100 100" class="w-full h-full">
-          <rect
-            x="2" y="2" width="96" height="96" rx="16"
-            :class="locked ? 'fill-amber-100 stroke-amber-500' : 'fill-white dark:fill-slate-200 stroke-slate-400 dark:stroke-slate-500'"
-            stroke-width="3"
-          />
-          <circle
-            v-for="(pos, i) in (dots[face] ?? [])"
-            :key="i"
-            :cx="20 + (pos[1] ?? 0) * 30"
-            :cy="20 + (pos[0] ?? 0) * 30"
-            r="9"
-            :class="locked ? 'fill-amber-700' : 'fill-slate-900'"
-          />
-        </svg>
+    <div class="die-wobble-wrapper">
+      <div class="die-cube" :style="cubeStyle">
+        <div
+          v-for="face in 6"
+          :key="face"
+          class="face"
+          :class="`face-${face}`"
+        >
+          <svg viewBox="0 0 100 100" class="w-full h-full">
+            <rect
+              x="2" y="2" width="96" height="96" rx="16"
+              :class="locked ? 'fill-amber-100 stroke-amber-500' : 'fill-white dark:fill-slate-200 stroke-slate-400 dark:stroke-slate-500'"
+              stroke-width="3"
+            />
+            <circle
+              v-for="(pos, i) in (dots[face] ?? [])"
+              :key="i"
+              :cx="20 + (pos[1] ?? 0) * 30"
+              :cy="20 + (pos[0] ?? 0) * 30"
+              r="9"
+              :class="locked ? 'fill-amber-700' : 'fill-slate-900'"
+            />
+          </svg>
+        </div>
       </div>
     </div>
   </button>
@@ -232,7 +234,12 @@ watch(() => props.value, (newVal) => {
   100% { transform: rotateZ(0deg); }
 }
 
-.die-dropping .die-cube {
+.die-wobble-wrapper {
+  width: 100%;
+  height: 100%;
+}
+
+.die-dropping .die-wobble-wrapper {
   animation: die-wobble var(--drop-duration) ease-out;
 }
 </style>
