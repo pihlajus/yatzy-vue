@@ -239,24 +239,18 @@ watch(() => game.phase, async (phase) => {
 
         <div class="flex gap-3 justify-center">
           <button
-            class="px-6 py-3 font-bold rounded-lg text-lg transition-colors"
-            :class="confirmAction === 'restart'
-              ? 'bg-red-600 text-white hover:bg-red-700'
-              : 'bg-green-600 dark:bg-green-700 text-white hover:bg-green-700 dark:hover:bg-green-600'"
-            @click="confirmAndRun('restart')"
-            @blur="cancelConfirm"
+            class="px-6 py-3 bg-green-600 dark:bg-green-700 text-white font-bold rounded-lg text-lg
+                   hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
+            @click="game.restartGame()"
           >
-            {{ confirmAction === 'restart' ? 'Oletko varma?' : 'Pelaa uudelleen' }}
+            Pelaa uudelleen
           </button>
           <button
-            class="px-6 py-3 font-bold rounded-lg text-lg transition-colors"
-            :class="confirmAction === 'newGame'
-              ? 'bg-red-600 text-white hover:bg-red-700'
-              : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'"
-            @click="confirmAndRun('newGame')"
-            @blur="cancelConfirm"
+            class="px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-lg
+                   hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+            @click="game.newGame()"
           >
-            {{ confirmAction === 'newGame' ? 'Oletko varma?' : 'Vaihda pelaajia' }}
+            Vaihda pelaajia
           </button>
         </div>
       </div>
