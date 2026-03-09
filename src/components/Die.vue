@@ -105,7 +105,7 @@ watch(() => props.rolling, (isRolling) => {
 })
 
 watch(() => props.value, (newVal) => {
-  if (!props.rolling && !hasRolled.value) {
+  if (!props.rolling) {
     setRotationForValue(newVal, false)
   }
 })

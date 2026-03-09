@@ -25,6 +25,7 @@ const shakePermissionNeeded = ref(false)
 const canRoll = computed(() => game.rollsLeft > 0 && !game.isGameOver)
 
 function roll() {
+  if (rolling.value) return
   game.roll()
   playRoll()
   rolling.value = true
@@ -85,7 +86,7 @@ async function grantShake() {
         class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg text-lg
                hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed
                transition-colors"
-        :disabled="game.rollsLeft <= 0 || game.isGameOver"
+        :disabled="game.rollsLeft <= 0 || game.isGameOver || rolling"
         @click="roll()"
       >
         Heitä {{ game.hasRolled ? `(${game.rollsLeft})` : '' }}
