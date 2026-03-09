@@ -212,7 +212,7 @@ watch(() => game.phase, async (phase) => {
             UUSI ENNÄTYS!
           </p>
           <p v-else-if="celebrating" class="text-2xl font-bold text-amber-600 mb-2 celebrate-text">
-            TOP 10!
+            TOP {{ playerNames().some((n) => n.toLowerCase() === 'akseli') ? 30 : 10 }}!
           </p>
           <p v-if="game.players.length === 1" class="text-xl font-bold text-green-800 dark:text-green-300">
             Peli ohi! Pisteet: {{ game.totalScore(game.players[0]!) }}
