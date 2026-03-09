@@ -22,6 +22,7 @@ function playerNames(): string[] {
 }
 const { soundEnabled, probabilitiesEnabled, darkMode, toggleSound, toggleProbabilities, toggleDarkMode } = useSettings()
 
+const playerSetupRef = ref<InstanceType<typeof PlayerSetup> | null>(null)
 const screenShake = ref(false)
 const confirmAction = ref<'restart' | 'newGame' | 'quit' | null>(null)
 
@@ -134,9 +135,9 @@ watch(() => game.phase, async (phase) => {
 
       <!-- Setup phase -->
       <template v-if="game.phase === 'setup'">
-        <PlayerSetup @start="game.startGame($event)" />
+        <PlayerSetup ref="playerSetupRef" @start="game.startGame($event)" />
         <div class="mt-6">
-          <HighScores />
+          <HighScores :player-names="playerSetupRef?.resolvedNames ?? []" />
         </div>
       </template>
 

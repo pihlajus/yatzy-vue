@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed, watch } from 'vue'
 import { useHighScores } from '../composables/useHighScores'
 
 const props = withDefaults(defineProps<{
@@ -11,6 +11,12 @@ const props = withDefaults(defineProps<{
 })
 
 const { scores, isLoading, error, scoreLimit, loadTopScores } = useHighScores()
+
+const hasAkseli = computed(() =>
+  props.playerNames.some((n) => n.toLowerCase() === 'akseli'),
+)
+
+watch(hasAkseli, () => loadTopScores(props.playerNames))
 
 function isHighlighted(id: string): boolean {
   return props.highlightIds.includes(id)

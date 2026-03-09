@@ -31,6 +31,8 @@ const resolvedNames = computed(() =>
     .map((n, i) => n.trim() || defaultNames[i]!),
 )
 
+defineExpose({ resolvedNames })
+
 function start() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     count: playerCount.value,
