@@ -12,12 +12,15 @@ export function useHighScores() {
   const scores = ref<HighScore[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const scoreLimit = ref(10)
 
-  async function loadTopScores() {
+  async function loadTopScores(playerNames: string[] = []) {
+    const isAkseli = playerNames.some((n) => n.toLowerCase() === 'akseli')
+    scoreLimit.value = isAkseli ? 30 : 10
     isLoading.value = true
     error.value = null
     try {
-      const q = query(collection(db, 'highscores'), orderBy('score', 'desc'), limit(10))
+      const q = query(collection(db, 'highscores'), orderBy('score', 'desc'), limit(scoreLimit.value))
       const snapshot = await getDocs(q)
       scores.value = snapshot.docs.map((doc) => {
         const data = doc.data()
@@ -40,5 +43,5 @@ export function useHighScores() {
     return !!first && first.id === docId
   }
 
-  return { scores, isLoading, error, loadTopScores, hasId, isNumberOne }
+  return { scores, isLoading, error, scoreLimit, loadTopScores, hasId, isNumberOne }
 }

@@ -4,22 +4,24 @@ import { useHighScores } from '../composables/useHighScores'
 
 const props = withDefaults(defineProps<{
   highlightIds?: string[]
+  playerNames?: string[]
 }>(), {
   highlightIds: () => [],
+  playerNames: () => [],
 })
 
-const { scores, isLoading, error, loadTopScores } = useHighScores()
+const { scores, isLoading, error, scoreLimit, loadTopScores } = useHighScores()
 
 function isHighlighted(id: string): boolean {
   return props.highlightIds.includes(id)
 }
 
-onMounted(loadTopScores)
+onMounted(() => loadTopScores(props.playerNames))
 </script>
 
 <template>
   <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
-    <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Top 10</h2>
+    <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">Top {{ scoreLimit }}</h2>
 
     <p v-if="isLoading" class="text-slate-500 dark:text-slate-400 text-sm">Ladataan tuloksia...</p>
 

@@ -16,6 +16,10 @@ const celebrating = ref(false)
 const isTop1 = ref(false)
 const savedDocIds = ref<string[]>([])
 const { loadTopScores, hasId, isNumberOne } = useHighScores()
+
+function playerNames(): string[] {
+  return game.players.map((p) => p.name)
+}
 const { soundEnabled, probabilitiesEnabled, darkMode, toggleSound, toggleProbabilities, toggleDarkMode } = useSettings()
 
 const screenShake = ref(false)
@@ -36,7 +40,7 @@ function cancelConfirm() {
 }
 
 function onScoresFlushed() {
-  loadTopScores()
+  loadTopScores(playerNames())
   scoreQueued.value = false
 }
 onMounted(() => window.addEventListener('scores-flushed', onScoresFlushed))
@@ -69,7 +73,7 @@ watch(() => game.phase, async (phase) => {
       return
     }
 
-    await loadTopScores()
+    await loadTopScores(playerNames())
     scoresSaved.value = true
 
     const top10Ids = savedDocIds.value.filter(hasId)
@@ -234,7 +238,7 @@ watch(() => game.phase, async (phase) => {
           <p v-else-if="scoreQueued" class="text-amber-600 dark:text-amber-400 text-sm">
             Ei verkkoyhteyttä -- pisteet lähetetään kun yhteys palaa
           </p>
-          <HighScores v-if="scoresSaved && !scoreQueued" :highlight-ids="savedDocIds" />
+          <HighScores v-if="scoresSaved && !scoreQueued" :highlight-ids="savedDocIds" :player-names="playerNames()" />
         </div>
 
         <div class="flex gap-3 justify-center">
