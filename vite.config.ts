@@ -17,6 +17,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,mp3}'],
+        skipWaiting: true,
+        clientsClaim: true,
       },
       manifest: false,
     }),
