@@ -60,6 +60,8 @@ export const useGameStore = defineStore('game', () => {
 
   const canUndo = computed(() => undoSnapshot.value !== null && !hasRolled.value)
 
+  const canInteract = computed(() => true)
+
   const currentPlayer = computed(() => players.value[currentPlayerIndex.value])
 
   const currentRound = computed(() =>
@@ -243,6 +245,7 @@ export const useGameStore = defineStore('game', () => {
     lastYatzy,
     lastBonus,
     canUndo,
+    canInteract,
     undoLastCategory,
   }
 })

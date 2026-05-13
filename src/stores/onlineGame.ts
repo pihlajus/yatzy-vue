@@ -60,6 +60,11 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
   )
   const canInteract = computed(() => isMyTurn.value)
   const hasRolled = computed(() => rollsLeft.value < MAX_ROLLS)
+  const currentRound = computed(() =>
+    players.value.length > 0
+      ? Math.floor(turnsPlayed.value / players.value.length) + 1
+      : 1,
+  )
   const canUndo = computed(() => false)
   const isGameOver = computed(() => phase.value === 'finished')
   const winner = computed(() => {
@@ -364,10 +369,10 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     code, hostUid, phase, players, dice, rollsLeft,
     currentPlayerIndex, turnsPlayed, lastYatzy, lastBonus, winnerUid, highScoresWritten,
     // computed
-    myUid, isHost, currentPlayer, isMyTurn, canInteract, hasRolled, canUndo, isGameOver, winner, potentialScores,
+    myUid, isHost, currentPlayer, isMyTurn, canInteract, hasRolled, canUndo, isGameOver, winner, potentialScores, currentRound,
     // methods
     upperSum, upperBonus, lowerSum, totalScore,
     subscribe, unsubscribeAll, _applyDocToState,
-    createGame, leaveGame, joinGame, startGame, rollDice, toggleLock, selectCategory, writeHighScoresAndMark, concedePlayer,
+    createGame, leaveGame, joinGame, startGame, rollDice, roll: rollDice, toggleLock, selectCategory, writeHighScoresAndMark, concedePlayer,
   }
 })
