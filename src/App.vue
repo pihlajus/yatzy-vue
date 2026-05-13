@@ -5,11 +5,39 @@ import PlayerSetup from './components/PlayerSetup.vue'
 import DiceArea from './components/DiceArea.vue'
 import Scorecard from './components/Scorecard.vue'
 import HighScores from './components/HighScores.vue'
+import ModeSelect from './components/ModeSelect.vue'
+import OnlineSetup from './components/OnlineSetup.vue'
+import OnlineJoin from './components/OnlineJoin.vue'
+import OnlineLobby from './components/OnlineLobby.vue'
+import PlayerList from './components/PlayerList.vue'
 import { savePlayerScores } from './firebase'
 import { useHighScores } from './composables/useHighScores'
 import { useSettings } from './composables/useSettings'
+import { useOnlineGameStore } from './stores/onlineGame'
+import { useProfileStore } from './stores/profile'
+import { useAppModeStore } from './stores/appMode'
+import { normalizeRoomCode, isValidRoomCode } from './codeGenerator'
 
 const game = useGameStore()
+const onlineGame = useOnlineGameStore()
+const profile = useProfileStore()
+const appMode = useAppModeStore()
+
+const url = new URL(window.location.href)
+const roomFromUrl = url.searchParams.get('room')
+const initialRoomCode = roomFromUrl ? normalizeRoomCode(roomFromUrl) : null
+const showModeSelect = ref(!initialRoomCode)
+const showOnlineJoin = ref(!!initialRoomCode && isValidRoomCode(initialRoomCode ?? ''))
+
+if (initialRoomCode) {
+  appMode.setMode('online')
+}
+
+function selectMode(mode: 'hotseat' | 'online') {
+  appMode.setMode(mode)
+  showModeSelect.value = false
+}
+
 const scoresSaved = ref(false)
 const scoreQueued = ref(false)
 const celebrating = ref(false)
@@ -29,8 +57,25 @@ const confirmAction = ref<'restart' | 'newGame' | 'quit' | null>(null)
 function confirmAndRun(action: 'restart' | 'newGame' | 'quit') {
   if (confirmAction.value === action) {
     confirmAction.value = null
-    if (action === 'restart') game.restartGame()
-    else game.newGame()
+    if (action === 'restart') {
+      game.restartGame()
+    } else if (action === 'newGame') {
+      game.newGame()
+      appMode.setMode('hotseat')
+      showModeSelect.value = true
+    } else if (action === 'quit') {
+      if (appMode.mode === 'online') {
+        onlineGame.leaveGame()
+        appMode.setMode('hotseat')
+        showModeSelect.value = true
+        const u = new URL(window.location.href)
+        u.searchParams.delete('room')
+        window.history.replaceState({}, '', u.toString())
+      } else {
+        game.newGame()
+        showModeSelect.value = true
+      }
+    }
   } else {
     confirmAction.value = action
   }
@@ -44,8 +89,14 @@ function onScoresFlushed() {
   loadTopScores(playerNames())
   scoreQueued.value = false
 }
-onMounted(() => window.addEventListener('scores-flushed', onScoresFlushed))
-onUnmounted(() => window.removeEventListener('scores-flushed', onScoresFlushed))
+onMounted(async () => {
+  window.addEventListener('scores-flushed', onScoresFlushed)
+  await profile.init().catch(() => {})
+})
+onUnmounted(() => {
+  window.removeEventListener('scores-flushed', onScoresFlushed)
+  onlineGame.unsubscribeAll()
+})
 
 watch(() => game.lastYatzy, (isYatzy) => {
   if (isYatzy) {
@@ -133,21 +184,49 @@ watch(() => game.phase, async (phase) => {
         </div>
       </header>
 
-      <!-- Setup phase -->
-      <template v-if="game.phase === 'setup'">
+      <!-- Mode selection (only when in hotseat mode + setup phase + user wants to choose) -->
+      <template v-if="appMode.mode === 'hotseat' && game.phase === 'setup' && showModeSelect">
+        <ModeSelect @select="selectMode" />
+        <div class="mt-6">
+          <HighScores :player-names="[]" />
+        </div>
+      </template>
+
+      <!-- Hot-seat player setup -->
+      <template v-else-if="appMode.mode === 'hotseat' && game.phase === 'setup'">
         <PlayerSetup ref="playerSetupRef" @start="game.startGame($event)" />
         <div class="mt-6">
           <HighScores :player-names="playerSetupRef?.resolvedNames ?? []" />
         </div>
+        <button class="mt-4 mx-auto block text-sm text-slate-500 underline" @click="showModeSelect = true">
+          Vaihda pelitilaa
+        </button>
       </template>
 
-      <!-- Playing phase -->
-      <template v-if="game.phase === 'playing'">
-        <p class="text-center text-slate-500 dark:text-slate-400 text-sm mb-1">
+      <!-- Online: deep-link join (URL ?room=) -->
+      <template v-else-if="appMode.mode === 'online' && showOnlineJoin && onlineGame.connectionState === 'idle'">
+        <OnlineJoin :initial-code="initialRoomCode!" />
+      </template>
+
+      <!-- Online: choose create/join -->
+      <template v-else-if="appMode.mode === 'online' && onlineGame.connectionState === 'idle'">
+        <OnlineSetup />
+      </template>
+
+      <!-- Online: lobby -->
+      <template v-else-if="appMode.mode === 'online' && onlineGame.phase === 'lobby'">
+        <OnlineLobby />
+      </template>
+
+      <!-- Playing phase (both hot-seat and online) -->
+      <template v-if="(appMode.mode === 'hotseat' && game.phase === 'playing')
+        || (appMode.mode === 'online' && onlineGame.phase === 'playing')">
+        <PlayerList v-if="appMode.mode === 'online'" />
+        <p v-else class="text-center text-slate-500 dark:text-slate-400 text-sm mb-1">
           Kierros {{ Math.min(game.currentRound, 15) }} / 15
         </p>
         <p
-          v-if="game.players.length > 1"
+          v-if="appMode.mode === 'hotseat' && game.players.length > 1"
           class="text-center text-blue-600 dark:text-blue-400 font-semibold mb-4"
         >
           {{ game.currentPlayer?.name }}n vuoro
@@ -163,13 +242,10 @@ watch(() => game.phase, async (phase) => {
 
         <div class="flex gap-2 mt-3">
           <button
-            v-if="game.canUndo"
-            class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm
-                   hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+            v-if="appMode.mode === 'hotseat' && game.canUndo"
+            class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
             @click="game.undoLastCategory()"
-          >
-            Kumoa viimeinen valinta
-          </button>
+          >Kumoa viimeinen valinta</button>
           <button
             class="px-4 py-2 rounded-lg text-sm transition-colors"
             :class="confirmAction === 'quit'
