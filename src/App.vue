@@ -3,7 +3,7 @@ import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useGameStore } from './stores/game'
 import PlayerSetup from './components/PlayerSetup.vue'
 import DiceArea from './components/DiceArea.vue'
-import Scorecard from './components/Scorecard.vue'
+import ScorecardComponent from './components/ScorecardComponent.vue'
 import HighScores from './components/HighScores.vue'
 import ModeSelect from './components/ModeSelect.vue'
 import OnlineSetup from './components/OnlineSetup.vue'
@@ -242,7 +242,7 @@ watch(() => onlineGame.phase, async (phase) => {
         </section>
 
         <section class="flex justify-center">
-          <Scorecard />
+          <ScorecardComponent />
         </section>
 
         <div class="flex gap-2 mt-3">
@@ -325,7 +325,7 @@ watch(() => onlineGame.phase, async (phase) => {
 
         <!-- Final scorecard -->
         <section class="flex justify-center mb-6">
-          <Scorecard />
+          <ScorecardComponent />
         </section>
 
         <div class="mb-6">

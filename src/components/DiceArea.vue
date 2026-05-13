@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useActiveGame } from '../composables/useActiveGame'
 import { useSound } from '../composables/useSound'
 import { useShake } from '../composables/useShake'
-import Die from './Die.vue'
+import DieComponent from './DieComponent.vue'
 
 const game = useActiveGame()
 const { playRoll, playBoom } = useSound()
@@ -35,7 +35,6 @@ function roll() {
 
 const {
   supported: shakeSupported,
-  permissionGranted: shakeGranted,
   requestPermission: requestShakePermission,
 } = useShake(() => {
   if (canRoll.value && !rolling.value) roll()
@@ -70,7 +69,7 @@ async function grantShake() {
     </div>
 
     <div class="flex gap-3" :class="{ 'yatzy-bounce': exploding }">
-      <Die
+      <DieComponent
         v-for="(die, i) in game.dice"
         :key="i"
         :value="die.value"
