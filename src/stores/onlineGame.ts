@@ -2,13 +2,15 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore'
 import { generateRoomCode, normalizeRoomCode, isValidRoomCode } from '../codeGenerator'
-import { db } from '../firebase'
+import { db, savePlayerScores } from '../firebase'
 import {
   Category,
   MAX_ROLLS,
   MAX_PLAYERS,
   MIN_PLAYERS_TO_START,
   ALL_CATEGORIES,
+  UPPER_BONUS_LIMIT,
+  NUM_ROUNDS,
   type GameDoc,
   type Die,
 } from '../types/game'
@@ -130,8 +132,12 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
           connectionState.value = 'error'
           return
         }
+        const before = phase.value
         _applyDocToState(snap.data() as GameDoc)
         connectionState.value = 'connected'
+        if (before !== 'finished' && phase.value === 'finished' && isHost.value && !highScoresWritten.value) {
+          void writeHighScoresAndMark()
+        }
       },
       (err) => {
         errorMessage.value = err.message
@@ -249,6 +255,67 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     })
   }
 
+  function findNextActivePlayer(ps: LocalOnlinePlayer[], fromIndex: number): number {
+    const n = ps.length
+    for (let step = 1; step <= n; step++) {
+      const i = (fromIndex + step) % n
+      const p = ps[i]!
+      if (p.conceded) continue
+      if (p.scores.size >= NUM_ROUNDS) continue
+      return i
+    }
+    return fromIndex
+  }
+
+  async function selectCategory(category: Category): Promise<void> {
+    if (!isMyTurn.value || !hasRolled.value) return
+    const player = currentPlayer.value
+    if (!player || player.scores.has(category)) return
+
+    const values = dice.value.map(d => d.value)
+    const score = calcScore(values, category)
+    const newPlayers: LocalOnlinePlayer[] = players.value.map(p => ({
+      ...p,
+      scores: new Map(p.scores),
+    }))
+    newPlayers[currentPlayerIndex.value]!.scores.set(category, score)
+
+    const hadBonus = calcUpperSum(player) >= UPPER_BONUS_LIMIT
+    const hasBonus = calcUpperSum(newPlayers[currentPlayerIndex.value]!) >= UPPER_BONUS_LIMIT
+    const allDone = newPlayers.every(p => p.scores.size >= NUM_ROUNDS || p.conceded)
+    const nextIndex = allDone
+      ? currentPlayerIndex.value
+      : findNextActivePlayer(newPlayers, currentPlayerIndex.value)
+    const newPhase: 'playing' | 'finished' = allDone ? 'finished' : 'playing'
+    const w = allDone ? findWinner(newPlayers) : null
+
+    await updateDoc(gameRef(), {
+      players: newPlayers.map(toFirestorePlayer),
+      currentPlayerIndex: nextIndex,
+      turnsPlayed: turnsPlayed.value + 1,
+      dice: createEmptyDice(),
+      rollsLeft: MAX_ROLLS,
+      lastBonus: !hadBonus && hasBonus,
+      lastYatzy: false,
+      phase: newPhase,
+      winnerUid: w?.uid ?? null,
+      updatedAt: serverTimestamp(),
+    })
+  }
+
+  async function writeHighScoresAndMark(): Promise<void> {
+    if (!isHost.value) return
+    if (phase.value !== 'finished') return
+    if (highScoresWritten.value) return
+    await savePlayerScores(
+      players.value.map(p => ({ name: p.name, score: calcTotalScore(p) })),
+    )
+    await updateDoc(gameRef(), {
+      highScoresWritten: true,
+      updatedAt: serverTimestamp(),
+    })
+  }
+
   async function toggleLock(index: number): Promise<void> {
     if (!isMyTurn.value || !hasRolled.value || rollsLeft.value <= 0) return
     const newDice = dice.value.map((d, i) =>
@@ -270,6 +337,6 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     // methods
     upperSum, upperBonus, lowerSum, totalScore,
     subscribe, unsubscribeAll, _applyDocToState,
-    createGame, leaveGame, joinGame, startGame, rollDice, toggleLock,
+    createGame, leaveGame, joinGame, startGame, rollDice, toggleLock, selectCategory, writeHighScoresAndMark,
   }
 })

@@ -6,6 +6,7 @@ import * as firestore from 'firebase/firestore'
 vi.mock('../firebase', () => ({
   db: {},
   ensureSignedIn: vi.fn().mockResolvedValue({ uid: 'mock-uid' }),
+  savePlayerScores: vi.fn().mockResolvedValue([]),
 }))
 
 vi.mock('firebase/firestore', async () => {
@@ -25,7 +26,7 @@ vi.mock('firebase/firestore', async () => {
 
 import { useOnlineGameStore } from '../stores/onlineGame'
 import { useProfileStore } from '../stores/profile'
-import { Category } from '../types/game'
+import { Category, NUM_ROUNDS } from '../types/game'
 
 describe('onlineGame store: applyDocToState', () => {
   beforeEach(() => setActivePinia(createPinia()))
@@ -217,5 +218,60 @@ describe('onlineGame store: rollDice & toggleLock', () => {
     const callArgs = vi.mocked(firestore.updateDoc).mock.calls[0]!
     const data = callArgs[1] as any
     expect(data.dice[2].locked).toBe(true)
+  })
+})
+
+describe('onlineGame store: selectCategory', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  function seedActive(s: ReturnType<typeof useOnlineGameStore>) {
+    const profile = useProfileStore() as any
+    profile.uid = 'mock-uid'
+    ;(s as any).gameId = 'g1'
+    ;(s as any).hostUid = 'mock-uid'
+  }
+
+  it('selectCategory tallentaa pisteet, vaihtaa vuoron, resetoi nopat', async () => {
+    const s = useOnlineGameStore()
+    seedActive(s)
+    s.players = [
+      { uid: 'mock-uid', name: 'A', scores: new Map(), conceded: false },
+      { uid: 'bob', name: 'B', scores: new Map(), conceded: false },
+    ]
+    s.phase = 'playing'
+    s.dice = Array.from({ length: 5 }, () => ({ value: 3, locked: false }))
+    s.rollsLeft = 1
+    s.currentPlayerIndex = 0
+    vi.mocked(firestore.updateDoc).mockResolvedValueOnce(undefined)
+    await s.selectCategory(Category.Threes)
+    const callArgs = vi.mocked(firestore.updateDoc).mock.calls[0]!
+    const data = callArgs[1] as any
+    expect(data.players[0].scores['2']).toBe(15) // five threes
+    expect(data.currentPlayerIndex).toBe(1)
+    expect(data.rollsLeft).toBe(3)
+    expect(data.turnsPlayed).toBe(1)
+    expect(data.phase).toBe('playing')
+  })
+
+  it('viimeinen scorecategoria päättää pelin', async () => {
+    const s = useOnlineGameStore()
+    seedActive(s)
+    const fullScores = new Map<Category, number>()
+    for (let i = 0; i < NUM_ROUNDS - 1; i++) fullScores.set(i as Category, 0)
+    s.players = [{ uid: 'mock-uid', name: 'A', scores: fullScores, conceded: false }]
+    s.phase = 'playing'
+    s.dice = Array.from({ length: 5 }, () => ({ value: 6, locked: false }))
+    s.rollsLeft = 1
+    s.currentPlayerIndex = 0
+    vi.mocked(firestore.updateDoc).mockResolvedValueOnce(undefined)
+    // Mock savePlayerScores in firebase mock — must add to top-of-file mock
+    await s.selectCategory(Category.Yatzy)
+    const callArgs = vi.mocked(firestore.updateDoc).mock.calls[0]!
+    const data = callArgs[1] as any
+    expect(data.phase).toBe('finished')
+    expect(data.winnerUid).toBe('mock-uid')
   })
 })
