@@ -73,3 +73,30 @@ export interface Player {
 }
 
 export type GamePhase = 'setup' | 'playing' | 'finished'
+
+export interface OnlinePlayer {
+  uid: string
+  name: string
+  scores: Record<string, number>
+  conceded: boolean
+}
+
+export interface GameDoc {
+  code: string
+  hostUid: string
+  createdAt: import('firebase/firestore').Timestamp
+  updatedAt: import('firebase/firestore').Timestamp
+  phase: 'lobby' | 'playing' | 'finished'
+  players: OnlinePlayer[]
+  dice: { value: number; locked: boolean }[]
+  rollsLeft: number
+  currentPlayerIndex: number
+  turnsPlayed: number
+  lastYatzy: boolean
+  lastBonus: boolean
+  winnerUid: string | null
+  highScoresWritten: boolean
+}
+
+export const MAX_PLAYERS = 4
+export const MIN_PLAYERS_TO_START = 2
