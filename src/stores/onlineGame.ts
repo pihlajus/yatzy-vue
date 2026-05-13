@@ -159,6 +159,21 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     }
     gameId.value = null
     connectionState.value = 'idle'
+    // Reset mirrored game state so a re-entry into online flow doesn't see
+    // stale phase='playing' alongside connectionState='idle'.
+    code.value = ''
+    hostUid.value = ''
+    phase.value = 'lobby'
+    players.value = []
+    dice.value = []
+    rollsLeft.value = MAX_ROLLS
+    currentPlayerIndex.value = 0
+    turnsPlayed.value = 0
+    lastYatzy.value = false
+    lastBonus.value = false
+    winnerUid.value = null
+    highScoresWritten.value = false
+    errorMessage.value = null
   }
 
   async function createGame(name: string): Promise<string> {
