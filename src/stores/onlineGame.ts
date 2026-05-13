@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, collection } from 'firebase/firestore'
-import { generateRoomCode } from '../codeGenerator'
+import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore'
+import { generateRoomCode, normalizeRoomCode, isValidRoomCode } from '../codeGenerator'
 import { db } from '../firebase'
 import {
   Category,
@@ -147,6 +147,45 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     unsubscribeAll()
   }
 
+  async function joinGame(rawCode: string, name: string): Promise<void> {
+    await profile.init()
+    const uid = profile.uid
+    if (!uid) throw new Error('Sisäänkirjautuminen ei valmis')
+
+    const code = normalizeRoomCode(rawCode)
+    if (!isValidRoomCode(code)) throw new Error('Koodi on virheellinen.')
+
+    await profile.setDisplayName(name)
+
+    const q = query(
+      collection(db, 'games'),
+      where('code', '==', code),
+      where('phase', 'in', ['lobby', 'playing']),
+    )
+    const snap = await getDocs(q)
+    if (snap.empty) throw new Error(`Koodia ${code} ei löytynyt.`)
+    const docSnap = snap.docs[0]!
+    const data = docSnap.data() as GameDoc
+
+    if (data.players.some(p => p.uid === uid)) {
+      subscribe(docSnap.id)
+      return
+    }
+
+    if (data.phase !== 'lobby') throw new Error('Peli on jo alkanut.')
+    if (data.players.length >= 4) throw new Error('Peli on täynnä.')
+
+    const newPlayers = [
+      ...data.players,
+      { uid, name, scores: {}, conceded: false },
+    ]
+    await updateDoc(docSnap.ref, {
+      players: newPlayers,
+      updatedAt: serverTimestamp(),
+    })
+    subscribe(docSnap.id)
+  }
+
   return {
     // state
     gameId, connectionState, errorMessage,
@@ -157,6 +196,6 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     // methods
     upperSum, upperBonus, lowerSum, totalScore,
     subscribe, unsubscribeAll, _applyDocToState,
-    createGame, leaveGame,
+    createGame, leaveGame, joinGame,
   }
 })

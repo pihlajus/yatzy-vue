@@ -17,6 +17,9 @@ vi.mock('firebase/firestore', async () => {
     setDoc: vi.fn().mockResolvedValue(undefined),
     serverTimestamp: vi.fn(() => 'TIMESTAMP_MARKER'),
     collection: vi.fn(() => ({})),
+    getDocs: vi.fn(),
+    query: vi.fn(() => ({})),
+    where: vi.fn(() => ({})),
   }
 })
 
@@ -76,5 +79,43 @@ describe('onlineGame store: createGame', () => {
     expect(data.players[0].uid).toBe('mock-uid')
     expect(data.players[0].name).toBe('Alice')
     expect(data.code).toMatch(/^[A-HJKMNP-Z2-9]{4}$/)
+  })
+})
+
+describe('onlineGame store: joinGame', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('joinGame normalisoi koodin uppercaseksi ennen kyselyä', async () => {
+    const s = useOnlineGameStore()
+    const getDocsMock = vi.mocked(firestore.getDocs)
+    getDocsMock.mockResolvedValueOnce({
+      empty: false,
+      docs: [{
+        id: 'g1',
+        ref: { id: 'g1' },
+        data: () => ({
+          code: 'K7M2', phase: 'lobby',
+          players: [{ uid: 'alice', name: 'A', scores: {}, conceded: false }],
+        }),
+      }],
+    } as any)
+    const updateDocMock = vi.mocked(firestore.updateDoc)
+    updateDocMock.mockResolvedValueOnce(undefined)
+    await s.joinGame(' k7m2 ', 'Bob')
+    expect(updateDocMock).toHaveBeenCalled()
+    const callArgs = updateDocMock.mock.calls[0]!
+    const data = callArgs[1] as any
+    expect(data.players).toHaveLength(2)
+    expect(data.players[1].uid).toBe('mock-uid')
+    expect(data.players[1].name).toBe('Bob')
+  })
+
+  it('joinGame heittää virheen jos koodia ei löydy', async () => {
+    const s = useOnlineGameStore()
+    vi.mocked(firestore.getDocs).mockResolvedValueOnce({ empty: true, docs: [] } as any)
+    await expect(s.joinGame('XXXX', 'Bob')).rejects.toThrow(/ei löytynyt/i)
   })
 })
