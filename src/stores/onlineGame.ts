@@ -316,6 +316,37 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     })
   }
 
+  async function concedePlayer(uid: string): Promise<void> {
+    if (!isHost.value) return
+    if (phase.value !== 'playing') return
+    const idx = players.value.findIndex(p => p.uid === uid)
+    if (idx === -1) return
+
+    const newPlayers = players.value.map(p => ({ ...p, scores: new Map(p.scores) }))
+    const target = newPlayers[idx]!
+    for (const cat of ALL_CATEGORIES) {
+      if (!target.scores.has(cat)) target.scores.set(cat, 0)
+    }
+    target.conceded = true
+
+    const allDone = newPlayers.every(p => p.scores.size >= NUM_ROUNDS || p.conceded)
+    const newPhase: 'playing' | 'finished' = allDone ? 'finished' : 'playing'
+    const w = allDone ? findWinner(newPlayers) : null
+
+    let nextIndex = currentPlayerIndex.value
+    if (currentPlayerIndex.value === idx && !allDone) {
+      nextIndex = findNextActivePlayer(newPlayers, idx)
+    }
+
+    await updateDoc(gameRef(), {
+      players: newPlayers.map(toFirestorePlayer),
+      currentPlayerIndex: nextIndex,
+      phase: newPhase,
+      winnerUid: w?.uid ?? null,
+      updatedAt: serverTimestamp(),
+    })
+  }
+
   async function toggleLock(index: number): Promise<void> {
     if (!isMyTurn.value || !hasRolled.value || rollsLeft.value <= 0) return
     const newDice = dice.value.map((d, i) =>
@@ -337,6 +368,6 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     // methods
     upperSum, upperBonus, lowerSum, totalScore,
     subscribe, unsubscribeAll, _applyDocToState,
-    createGame, leaveGame, joinGame, startGame, rollDice, toggleLock, selectCategory, writeHighScoresAndMark,
+    createGame, leaveGame, joinGame, startGame, rollDice, toggleLock, selectCategory, writeHighScoresAndMark, concedePlayer,
   }
 })

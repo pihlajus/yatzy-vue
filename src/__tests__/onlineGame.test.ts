@@ -275,3 +275,35 @@ describe('onlineGame store: selectCategory', () => {
     expect(data.winnerUid).toBe('mock-uid')
   })
 })
+
+describe('onlineGame store: concedePlayer', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('concedePlayer asettaa täyttämättömät kategoriat nolliksi ja conceded=true', async () => {
+    const s = useOnlineGameStore()
+    const profile = useProfileStore() as any
+    profile.uid = 'mock-uid'
+    ;(s as any).gameId = 'g1'
+    ;(s as any).hostUid = 'mock-uid'
+    s.players = [
+      { uid: 'mock-uid', name: 'A', scores: new Map(), conceded: false },
+      { uid: 'bob', name: 'B', scores: new Map([[Category.Ones, 3]]), conceded: false },
+    ]
+    s.phase = 'playing'
+    s.currentPlayerIndex = 1
+    vi.mocked(firestore.updateDoc).mockResolvedValueOnce(undefined)
+
+    await s.concedePlayer('bob')
+
+    const callArgs = vi.mocked(firestore.updateDoc).mock.calls[0]!
+    const data = callArgs[1] as any
+    const bobScores = data.players[1].scores
+    expect(bobScores['0']).toBe(3) // already-scored category preserved
+    expect(bobScores['14']).toBe(0) // Yatzy slot filled with 0
+    expect(data.players[1].conceded).toBe(true)
+    expect(data.currentPlayerIndex).toBe(0)
+  })
+})
