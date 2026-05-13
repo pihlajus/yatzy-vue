@@ -40,3 +40,8 @@ __screenshots__/
 
 # Deploy
 deploy.sh
+
+# Firebase
+firebase-debug.log
+firestore-debug.log
+.firebase/

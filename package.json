@@ -10,6 +10,7 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "test": "vitest run",
+    "test:rules": "firebase emulators:exec --only firestore,auth 'vitest run src/__tests__/rules'",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache"
@@ -20,6 +21,7 @@
     "vue": "^3.5.29"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@pinia/testing": "^1.0.3",
     "@tailwindcss/vite": "^4.2.1",
     "@tsconfig/node24": "^24.0.4",
@@ -30,6 +32,7 @@
     "eslint": "^10.0.2",
     "eslint-plugin-oxlint": "~1.50.0",
     "eslint-plugin-vue": "~10.8.0",
+    "firebase-tools": "^15.17.0",
     "jiti": "^2.6.1",
     "jsdom": "^28.1.0",
     "npm-run-all2": "^8.0.4",
