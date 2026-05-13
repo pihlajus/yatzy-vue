@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "test": "vitest run",
+    "test": "vitest run --exclude 'src/__tests__/rules/**'",
     "test:rules": "firebase emulators:exec --only firestore,auth 'vitest run src/__tests__/rules --no-file-parallelism'",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
