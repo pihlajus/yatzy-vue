@@ -29,8 +29,68 @@ service cloud.firestore {
 
     match /games/{gameId} {
       allow read: if true;
-      allow create, update: if false;
+
+      allow create: if request.auth != null && isValidNewGame();
+
+      allow update: if request.auth != null
+        && immutables()
+        && (isJoinLobby() || isStartGame() || isTurnUpdate() || isConcedeAction() || isHighScoreMark());
+
       allow delete: if false;
     }
+
+    function isValidNewGame() {
+      let d = request.resource.data;
+      return d.hostUid == request.auth.uid
+        && d.phase == 'lobby'
+        && d.code is string && d.code.size() == 4
+        && d.players.size() == 1
+        && d.players[0].uid == request.auth.uid
+        && d.players[0].conceded == false
+        && d.highScoresWritten == false
+        && d.turnsPlayed == 0
+        && d.rollsLeft == 0
+        && d.createdAt == request.time
+        && d.updatedAt == request.time;
+    }
+
+    function immutables() {
+      let b = resource.data;
+      let a = request.resource.data;
+      return a.code == b.code
+        && a.hostUid == b.hostUid
+        && a.createdAt == b.createdAt
+        && a.updatedAt == request.time;
+    }
+
+    function affected() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function isJoinLobby() {
+      let b = resource.data;
+      let a = request.resource.data;
+      let uid = request.auth.uid;
+      let newSize = a.players.size();
+      let oldSize = b.players.size();
+      return b.phase == 'lobby'
+        && a.phase == 'lobby'
+        && newSize == oldSize + 1
+        && newSize <= 4
+        && a.players[newSize - 1].uid == uid
+        && a.players[newSize - 1].conceded == false
+        && a.players[newSize - 1].scores.size() == 0
+        && (oldSize == 0 || a.players[0] == b.players[0])
+        && (oldSize <= 1 || a.players[1] == b.players[1])
+        && (oldSize <= 2 || a.players[2] == b.players[2])
+        && (oldSize <= 3 || a.players[3] == b.players[3])
+        && affected().hasOnly(['players', 'updatedAt']);
+    }
+
+    // Placeholders for Task C3 — currently deny these action types
+    function isStartGame() { return false; }
+    function isTurnUpdate() { return false; }
+    function isConcedeAction() { return false; }
+    function isHighScoreMark() { return false; }
   }
 }
