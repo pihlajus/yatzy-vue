@@ -24,6 +24,7 @@ vi.mock('firebase/firestore', async () => {
 })
 
 import { useOnlineGameStore } from '../stores/onlineGame'
+import { useProfileStore } from '../stores/profile'
 import { Category } from '../types/game'
 
 describe('onlineGame store: applyDocToState', () => {
@@ -117,5 +118,37 @@ describe('onlineGame store: joinGame', () => {
     const s = useOnlineGameStore()
     vi.mocked(firestore.getDocs).mockResolvedValueOnce({ empty: true, docs: [] } as any)
     await expect(s.joinGame('XXXX', 'Bob')).rejects.toThrow(/ei löytynyt/i)
+  })
+})
+
+describe('onlineGame store: startGame', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('startGame shufflaa pelaajat ja asettaa phase = playing', async () => {
+    const s = useOnlineGameStore()
+    const profile = useProfileStore()
+    // Seed store state directly (subscribe path is mocked away)
+    ;(profile as any).uid = 'mock-uid'
+    ;(s as any).gameId = 'g1'
+    ;(s as any).hostUid = 'mock-uid'
+    s.players = [
+      { uid: 'mock-uid', name: 'A', scores: new Map(), conceded: false },
+      { uid: 'bob', name: 'B', scores: new Map(), conceded: false },
+    ]
+    ;(s as any).phase = 'lobby'
+    vi.mocked(firestore.updateDoc).mockResolvedValueOnce(undefined)
+    await s.startGame()
+    expect(vi.mocked(firestore.updateDoc)).toHaveBeenCalled()
+    const callArgs = vi.mocked(firestore.updateDoc).mock.calls[0]!
+    const data = callArgs[1] as any
+    expect(data.phase).toBe('playing')
+    expect(data.rollsLeft).toBe(3)
+    expect(data.dice).toHaveLength(5)
+    expect(data.players).toHaveLength(2)
+    expect(data.currentPlayerIndex).toBe(0)
+    expect(data.turnsPlayed).toBe(0)
   })
 })

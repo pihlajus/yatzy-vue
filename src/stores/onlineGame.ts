@@ -6,11 +6,14 @@ import { db } from '../firebase'
 import {
   Category,
   MAX_ROLLS,
+  MAX_PLAYERS,
+  MIN_PLAYERS_TO_START,
   type GameDoc,
   type Die,
 } from '../types/game'
 import {
   toLocalPlayer,
+  toFirestorePlayer,
   type LocalOnlinePlayer,
 } from '../gameDocSerialization'
 import {
@@ -59,6 +62,24 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     if (phase.value !== 'finished') return null
     return findWinner(players.value)
   })
+
+  function gameRef() {
+    if (!gameId.value) throw new Error('Ei aktiivista peliä')
+    return doc(db, 'games', gameId.value)
+  }
+
+  function shuffle<T>(arr: T[]): T[] {
+    const a = [...arr]
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[a[i], a[j]] = [a[j]!, a[i]!]
+    }
+    return a
+  }
+
+  function createEmptyDice() {
+    return Array.from({ length: 5 }, () => ({ value: 1, locked: false }))
+  }
 
   function upperSum(p: LocalOnlinePlayer) { return calcUpperSum(p) }
   function upperBonus(p: LocalOnlinePlayer) { return calcUpperBonus(p) }
@@ -186,6 +207,21 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     subscribe(docSnap.id)
   }
 
+  async function startGame(): Promise<void> {
+    if (!isHost.value) throw new Error('Vain isäntä voi aloittaa pelin')
+    if (players.value.length < MIN_PLAYERS_TO_START) throw new Error('Tarvitaan vähintään 2 pelaajaa')
+    const shuffled = shuffle(players.value).map(toFirestorePlayer)
+    await updateDoc(gameRef(), {
+      phase: 'playing',
+      players: shuffled,
+      dice: createEmptyDice(),
+      rollsLeft: MAX_ROLLS,
+      currentPlayerIndex: 0,
+      turnsPlayed: 0,
+      updatedAt: serverTimestamp(),
+    })
+  }
+
   return {
     // state
     gameId, connectionState, errorMessage,
@@ -196,6 +232,6 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     // methods
     upperSum, upperBonus, lowerSum, totalScore,
     subscribe, unsubscribeAll, _applyDocToState,
-    createGame, leaveGame, joinGame,
+    createGame, leaveGame, joinGame, startGame,
   }
 })
