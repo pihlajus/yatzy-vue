@@ -17,6 +17,7 @@ import {
   lowerSum as calcLowerSum,
   totalScore as calcTotalScore,
   findWinner,
+  type ScorablePlayer,
 } from '../scoreHelpers'
 
 function rollDie(): number {
@@ -86,10 +87,10 @@ export const useGameStore = defineStore('game', () => {
     players.value.every((p) => p.scores.size >= NUM_ROUNDS),
   )
 
-  function upperSum(player: Player): number { return calcUpperSum(player) }
-  function upperBonus(player: Player): number { return calcUpperBonus(player) }
-  function lowerSum(player: Player): number { return calcLowerSum(player) }
-  function totalScore(player: Player): number { return calcTotalScore(player) }
+  function upperSum(player: ScorablePlayer): number { return calcUpperSum(player) }
+  function upperBonus(player: ScorablePlayer): number { return calcUpperBonus(player) }
+  function lowerSum(player: ScorablePlayer): number { return calcLowerSum(player) }
+  function totalScore(player: ScorablePlayer): number { return calcTotalScore(player) }
 
   const winner = computed(() => {
     if (!isGameOver.value || players.value.length === 0) return null

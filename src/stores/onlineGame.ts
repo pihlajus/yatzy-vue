@@ -26,6 +26,7 @@ import {
   lowerSum as calcLowerSum,
   totalScore as calcTotalScore,
   findWinner,
+  type ScorablePlayer,
 } from '../scoreHelpers'
 import { useProfileStore } from './profile'
 
@@ -92,10 +93,10 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     return Array.from({ length: 5 }, () => ({ value: 1, locked: false }))
   }
 
-  function upperSum(p: LocalOnlinePlayer) { return calcUpperSum(p) }
-  function upperBonus(p: LocalOnlinePlayer) { return calcUpperBonus(p) }
-  function lowerSum(p: LocalOnlinePlayer) { return calcLowerSum(p) }
-  function totalScore(p: LocalOnlinePlayer) { return calcTotalScore(p) }
+  function upperSum(p: ScorablePlayer) { return calcUpperSum(p) }
+  function upperBonus(p: ScorablePlayer) { return calcUpperBonus(p) }
+  function lowerSum(p: ScorablePlayer) { return calcLowerSum(p) }
+  function totalScore(p: ScorablePlayer) { return calcTotalScore(p) }
 
   const potentialScores = computed(() => {
     if (!hasRolled.value || !currentPlayer.value) return new Map<Category, number>()

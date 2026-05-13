@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { useGameStore } from '../stores/game'
+import { useActiveGame } from '../composables/useActiveGame'
 import { useSound } from '../composables/useSound'
 import { useShake } from '../composables/useShake'
 import Die from './Die.vue'
 
-const game = useGameStore()
+const game = useActiveGame()
 const { playRoll, playBoom } = useSound()
 const rolling = ref(false)
 const exploding = ref(false)
@@ -22,10 +22,11 @@ watch(() => game.lastYatzy, (isYatzy) => {
 })
 const shakePermissionNeeded = ref(false)
 
-const canRoll = computed(() => game.rollsLeft > 0 && !game.isGameOver)
+const canRoll = computed(() => game.rollsLeft > 0 && !game.isGameOver && game.canInteract)
 
 function roll() {
   if (rolling.value) return
+  if (!game.canInteract) return
   game.roll()
   playRoll()
   rolling.value = true
@@ -76,7 +77,7 @@ async function grantShake() {
         :locked="die.locked"
         :rolling="rolling"
         :drop-index="i"
-        :can-toggle="game.hasRolled && game.rollsLeft > 0"
+        :can-toggle="game.canInteract && game.hasRolled && game.rollsLeft > 0"
         @toggle="game.toggleLock(i)"
       />
     </div>
@@ -86,7 +87,7 @@ async function grantShake() {
         class="px-6 py-3 bg-blue-600 text-white font-bold rounded-lg text-lg
                hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed
                transition-colors"
-        :disabled="game.rollsLeft <= 0 || game.isGameOver || rolling"
+        :disabled="!canRoll || rolling"
         @click="roll()"
       >
         Heitä {{ game.hasRolled ? `(${game.rollsLeft})` : '' }}
