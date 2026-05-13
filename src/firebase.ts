@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore'
+import { getAuth, signInAnonymously, onAuthStateChanged, type User } from 'firebase/auth'
 
 const app = initializeApp({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -8,6 +9,28 @@ const app = initializeApp({
 })
 
 export const db = getFirestore(app)
+export const auth = getAuth(app)
+
+let signInPromise: Promise<User> | null = null
+
+export function ensureSignedIn(): Promise<User> {
+  if (auth.currentUser) return Promise.resolve(auth.currentUser)
+  if (signInPromise) return signInPromise
+  signInPromise = new Promise<User>((resolve, reject) => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsub()
+        resolve(user)
+      }
+    })
+    signInAnonymously(auth).catch((err) => {
+      unsub()
+      signInPromise = null
+      reject(err)
+    })
+  })
+  return signInPromise
+}
 
 const QUEUE_KEY = 'yatzy_score_queue'
 
