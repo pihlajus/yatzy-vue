@@ -128,11 +128,23 @@ service cloud.firestore {
     function isConcedeAction() {
       let b = resource.data;
       let a = request.resource.data;
-      return request.auth.uid == b.hostUid
-        && b.phase == 'playing'
+      return b.phase == 'playing'
         && (a.phase == 'playing' || a.phase == 'finished')
         && a.players.size() == b.players.size()
-        && affected().hasOnly(['players', 'currentPlayerIndex', 'phase', 'winnerUid', 'updatedAt']);
+        && affected().hasOnly(['players', 'currentPlayerIndex', 'phase', 'winnerUid', 'updatedAt'])
+        && (request.auth.uid == b.hostUid || isSelfConcede());
+    }
+
+    // Allow any player to mark themselves as conceded (e.g. when quitting mid-game).
+    // The change must flip the auth user's own conceded flag from false to true.
+    function isSelfConcede() {
+      let b = resource.data;
+      let a = request.resource.data;
+      let uid = request.auth.uid;
+      return (b.players.size() > 0 && b.players[0].uid == uid && b.players[0].conceded == false && a.players[0].conceded == true)
+        || (b.players.size() > 1 && b.players[1].uid == uid && b.players[1].conceded == false && a.players[1].conceded == true)
+        || (b.players.size() > 2 && b.players[2].uid == uid && b.players[2].conceded == false && a.players[2].conceded == true)
+        || (b.players.size() > 3 && b.players[3].uid == uid && b.players[3].conceded == false && a.players[3].conceded == true);
     }
 
     function isHighScoreMark() {

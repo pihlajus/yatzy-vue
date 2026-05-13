@@ -338,8 +338,9 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
   }
 
   async function concedePlayer(uid: string): Promise<void> {
-    if (!isHost.value) return
     if (phase.value !== 'playing') return
+    // Host may concede anyone; any player may concede themselves.
+    if (!isHost.value && uid !== myUid.value) return
     const idx = players.value.findIndex(p => p.uid === uid)
     if (idx === -1) return
 

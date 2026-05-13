@@ -54,7 +54,7 @@ const playerSetupRef = ref<InstanceType<typeof PlayerSetup> | null>(null)
 const screenShake = ref(false)
 const confirmAction = ref<'restart' | 'newGame' | 'quit' | null>(null)
 
-function confirmAndRun(action: 'restart' | 'newGame' | 'quit') {
+async function confirmAndRun(action: 'restart' | 'newGame' | 'quit') {
   if (confirmAction.value === action) {
     confirmAction.value = null
     if (action === 'restart') {
@@ -65,6 +65,15 @@ function confirmAndRun(action: 'restart' | 'newGame' | 'quit') {
       showModeSelect.value = true
     } else if (action === 'quit') {
       if (appMode.mode === 'online') {
+        // Self-concede if we're mid-game so other players see we left.
+        const me = onlineGame.players.find((p) => p.uid === onlineGame.myUid)
+        if (onlineGame.phase === 'playing' && me && !me.conceded) {
+          try {
+            await onlineGame.concedePlayer(onlineGame.myUid)
+          } catch {
+            // Best effort; carry on with leave even if write fails.
+          }
+        }
         onlineGame.leaveGame()
         appMode.setMode('hotseat')
         showModeSelect.value = true
