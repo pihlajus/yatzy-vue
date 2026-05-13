@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import * as firestore from 'firebase/firestore'
 
 vi.mock('../firebase', () => ({
   db: {},
@@ -10,11 +11,12 @@ vi.mock('../firebase', () => ({
 vi.mock('firebase/firestore', async () => {
   const actual = await vi.importActual<typeof import('firebase/firestore')>('firebase/firestore')
   return { ...actual,
-    doc: vi.fn(() => ({})),
+    doc: vi.fn(() => ({ id: 'mock-game-id' })),
     onSnapshot: vi.fn(() => () => {}),
     updateDoc: vi.fn().mockResolvedValue(undefined),
     setDoc: vi.fn().mockResolvedValue(undefined),
     serverTimestamp: vi.fn(() => 'TIMESTAMP_MARKER'),
+    collection: vi.fn(() => ({})),
   }
 })
 
@@ -48,5 +50,31 @@ describe('onlineGame store: applyDocToState', () => {
     expect(s.players[0].scores.get(Category.Ones)).toBe(3)
     expect(s.dice[0].locked).toBe(true)
     expect(s.currentPlayerIndex).toBe(1)
+  })
+})
+
+describe('onlineGame store: createGame', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('createGame asettaa hostUid:n, koodin ja yhden pelaajan', async () => {
+    const s = useOnlineGameStore()
+    const setDocMock = vi.mocked(firestore.setDoc)
+    setDocMock.mockResolvedValueOnce(undefined)
+
+    const id = await s.createGame('Alice')
+
+    expect(typeof id).toBe('string')
+    expect(setDocMock).toHaveBeenCalled()
+    const callArgs = setDocMock.mock.calls[0]!
+    const data = callArgs[1] as any
+    expect(data.hostUid).toBe('mock-uid')
+    expect(data.phase).toBe('lobby')
+    expect(data.players).toHaveLength(1)
+    expect(data.players[0].uid).toBe('mock-uid')
+    expect(data.players[0].name).toBe('Alice')
+    expect(data.code).toMatch(/^[A-HJKMNP-Z2-9]{4}$/)
   })
 })

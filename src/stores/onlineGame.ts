@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, onSnapshot, setDoc, updateDoc, serverTimestamp, collection } from 'firebase/firestore'
+import { generateRoomCode } from '../codeGenerator'
 import { db } from '../firebase'
 import {
   Category,
@@ -114,6 +115,38 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     connectionState.value = 'idle'
   }
 
+  async function createGame(name: string): Promise<string> {
+    await profile.init()
+    const uid = profile.uid
+    if (!uid) throw new Error('Sisäänkirjautuminen ei valmis')
+
+    const ref = doc(collection(db, 'games'))
+    const code = generateRoomCode()
+    await setDoc(ref, {
+      code,
+      hostUid: uid,
+      phase: 'lobby',
+      players: [{ uid, name, scores: {}, conceded: false }],
+      dice: [],
+      rollsLeft: 0,
+      currentPlayerIndex: 0,
+      turnsPlayed: 0,
+      lastYatzy: false,
+      lastBonus: false,
+      winnerUid: null,
+      highScoresWritten: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    await profile.setDisplayName(name)
+    subscribe(ref.id)
+    return ref.id
+  }
+
+  async function leaveGame() {
+    unsubscribeAll()
+  }
+
   return {
     // state
     gameId, connectionState, errorMessage,
@@ -124,5 +157,6 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     // methods
     upperSum, upperBonus, lowerSum, totalScore,
     subscribe, unsubscribeAll, _applyDocToState,
+    createGame, leaveGame,
   }
 })
