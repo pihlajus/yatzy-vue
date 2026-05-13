@@ -6,13 +6,18 @@ import {
   type GamePhase,
   Category,
   ALL_CATEGORIES,
-  UPPER_CATEGORIES,
   UPPER_BONUS_LIMIT,
-  UPPER_BONUS_POINTS,
   MAX_ROLLS,
   NUM_ROUNDS,
 } from '../types/game'
 import { calcScore } from '../scoring'
+import {
+  upperSum as calcUpperSum,
+  upperBonus as calcUpperBonus,
+  lowerSum as calcLowerSum,
+  totalScore as calcTotalScore,
+  findWinner,
+} from '../scoreHelpers'
 
 function rollDie(): number {
   return Math.floor(Math.random() * 6) + 1
@@ -79,37 +84,14 @@ export const useGameStore = defineStore('game', () => {
     players.value.every((p) => p.scores.size >= NUM_ROUNDS),
   )
 
-  function upperSum(player: Player): number {
-    let sum = 0
-    for (const cat of UPPER_CATEGORIES) {
-      sum += player.scores.get(cat) ?? 0
-    }
-    return sum
-  }
-
-  function upperBonus(player: Player): number {
-    return upperSum(player) >= UPPER_BONUS_LIMIT ? UPPER_BONUS_POINTS : 0
-  }
-
-  function lowerSum(player: Player): number {
-    let sum = 0
-    for (const cat of ALL_CATEGORIES) {
-      if (!UPPER_CATEGORIES.includes(cat)) {
-        sum += player.scores.get(cat) ?? 0
-      }
-    }
-    return sum
-  }
-
-  function totalScore(player: Player): number {
-    return upperSum(player) + upperBonus(player) + lowerSum(player)
-  }
+  function upperSum(player: Player): number { return calcUpperSum(player) }
+  function upperBonus(player: Player): number { return calcUpperBonus(player) }
+  function lowerSum(player: Player): number { return calcLowerSum(player) }
+  function totalScore(player: Player): number { return calcTotalScore(player) }
 
   const winner = computed(() => {
     if (!isGameOver.value || players.value.length === 0) return null
-    return players.value.reduce((best, p) =>
-      totalScore(p) > totalScore(best) ? p : best,
-    )
+    return findWinner(players.value)
   })
 
   // Actions
