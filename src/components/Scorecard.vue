@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useGameStore } from '../stores/game'
+import { useActiveGame } from '../composables/useActiveGame'
 import { useSound } from '../composables/useSound'
 import { useSettings } from '../composables/useSettings'
 import { calcProbabilities } from '../probability'
@@ -9,10 +9,9 @@ import {
   CATEGORY_NAMES,
   UPPER_CATEGORIES,
   LOWER_CATEGORIES,
-  type Player,
 } from '../types/game'
 
-const game = useGameStore()
+const game = useActiveGame()
 const { playClick } = useSound()
 const { probabilitiesEnabled } = useSettings()
 
@@ -34,22 +33,24 @@ const probabilities = computed(() => {
   return calcProbabilities(free, locked, game.rollsLeft)
 })
 
-function probDisplay(cat: Category, player: Player): string {
+type AnyPlayer = { name: string; scores: Map<Category, number> }
+
+function probDisplay(cat: Category, player: AnyPlayer): string {
   if (!isActive(player) || player.scores.has(cat)) return ''
   const p = probabilities.value.get(cat)
   if (p === undefined) return ''
   return `${Math.round(p * 100)}%`
 }
 
-function isActive(player: Player): boolean {
+function isActive(player: AnyPlayer): boolean {
   return player === game.currentPlayer
 }
 
-function isSelectable(cat: Category, player: Player): boolean {
-  return isActive(player) && game.hasRolled && !player.scores.has(cat) && !game.isGameOver
+function isSelectable(cat: Category, player: AnyPlayer): boolean {
+  return game.canInteract && isActive(player) && game.hasRolled && !player.scores.has(cat) && !game.isGameOver
 }
 
-function displayScore(cat: Category, player: Player): string {
+function displayScore(cat: Category, player: AnyPlayer): string {
   if (player.scores.has(cat)) {
     return String(player.scores.get(cat))
   }
@@ -65,7 +66,7 @@ function select(cat: Category) {
   game.selectCategory(cat)
 }
 
-function scoreClass(cat: Category, player: Player): string {
+function scoreClass(cat: Category, player: AnyPlayer): string {
   if (player.scores.has(cat)) return 'font-semibold'
   if (isActive(player) && game.hasRolled && !player.scores.has(cat)) return 'text-slate-400 italic'
   return ''
