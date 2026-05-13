@@ -87,10 +87,63 @@ service cloud.firestore {
         && affected().hasOnly(['players', 'updatedAt']);
     }
 
-    // Placeholders for Task C3 — currently deny these action types
-    function isStartGame() { return false; }
-    function isTurnUpdate() { return false; }
-    function isConcedeAction() { return false; }
-    function isHighScoreMark() { return false; }
+    function isStartGame() {
+      let b = resource.data;
+      let a = request.resource.data;
+      return request.auth.uid == b.hostUid
+        && b.phase == 'lobby'
+        && a.phase == 'playing'
+        && a.players.size() >= 2
+        && a.players.size() == b.players.size()
+        && a.currentPlayerIndex >= 0
+        && a.currentPlayerIndex < a.players.size()
+        && a.rollsLeft == 3
+        && a.turnsPlayed == 0
+        && a.dice.size() == 5
+        && affected().hasOnly(['phase', 'players', 'dice', 'rollsLeft', 'currentPlayerIndex', 'turnsPlayed', 'updatedAt']);
+    }
+
+    function isTurnUpdate() {
+      let b = resource.data;
+      let a = request.resource.data;
+      let uid = request.auth.uid;
+      return b.phase == 'playing'
+        && b.players[b.currentPlayerIndex].uid == uid
+        && a.players.size() == b.players.size()
+        && (b.players.size() <= 0 || b.currentPlayerIndex == 0 || a.players[0] == b.players[0])
+        && (b.players.size() <= 1 || b.currentPlayerIndex == 1 || a.players[1] == b.players[1])
+        && (b.players.size() <= 2 || b.currentPlayerIndex == 2 || a.players[2] == b.players[2])
+        && (b.players.size() <= 3 || b.currentPlayerIndex == 3 || a.players[3] == b.players[3])
+        && a.players[b.currentPlayerIndex].uid == b.players[b.currentPlayerIndex].uid
+        && a.players[b.currentPlayerIndex].name == b.players[b.currentPlayerIndex].name
+        && a.players[b.currentPlayerIndex].conceded == b.players[b.currentPlayerIndex].conceded
+        && affected().hasOnly([
+          'dice', 'rollsLeft', 'lastYatzy', 'lastBonus',
+          'players', 'currentPlayerIndex', 'turnsPlayed',
+          'phase', 'winnerUid', 'updatedAt'
+        ])
+        && (a.phase == 'playing' || a.phase == 'finished');
+    }
+
+    function isConcedeAction() {
+      let b = resource.data;
+      let a = request.resource.data;
+      return request.auth.uid == b.hostUid
+        && b.phase == 'playing'
+        && (a.phase == 'playing' || a.phase == 'finished')
+        && a.players.size() == b.players.size()
+        && affected().hasOnly(['players', 'currentPlayerIndex', 'phase', 'winnerUid', 'updatedAt']);
+    }
+
+    function isHighScoreMark() {
+      let b = resource.data;
+      let a = request.resource.data;
+      return request.auth.uid == b.hostUid
+        && b.phase == 'finished'
+        && a.phase == 'finished'
+        && b.highScoresWritten == false
+        && a.highScoresWritten == true
+        && affected().hasOnly(['highScoresWritten', 'updatedAt']);
+    }
   }
 }
