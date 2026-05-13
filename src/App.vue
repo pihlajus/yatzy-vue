@@ -135,6 +135,11 @@ watch(() => game.phase, async (phase) => {
     }
   }
 })
+
+watch(() => onlineGame.phase, async (phase) => {
+  if (phase !== 'finished') return
+  await loadTopScores(onlineGame.players.map(p => p.name))
+})
 </script>
 
 <template>
@@ -259,10 +264,14 @@ watch(() => game.phase, async (phase) => {
         </div>
       </template>
 
-      <!-- Finished phase -->
-      <div v-if="game.phase === 'finished'" class="text-center relative">
-        <!-- Confetti overlay -->
-        <div v-if="celebrating" class="confetti-container" aria-hidden="true">
+      <!-- Finished phase (both hot-seat and online) -->
+      <div
+        v-if="(appMode.mode === 'hotseat' && game.phase === 'finished')
+          || (appMode.mode === 'online' && onlineGame.phase === 'finished')"
+        class="text-center relative"
+      >
+        <!-- Confetti & top1 celebrations (hot-seat only) -->
+        <div v-if="appMode.mode === 'hotseat' && celebrating" class="confetti-container" aria-hidden="true">
           <div v-for="i in (isTop1 ? 80 : 50)" :key="i" class="confetti" :style="{
             left: `${Math.random() * 100}%`,
             animationDelay: `${Math.random() * 3}s`,
@@ -273,66 +282,78 @@ watch(() => game.phase, async (phase) => {
           }" />
         </div>
 
-        <!-- Star burst for #1 -->
-        <div v-if="isTop1" class="star-burst" aria-hidden="true">
+        <div v-if="appMode.mode === 'hotseat' && isTop1" class="star-burst" aria-hidden="true">
           <div v-for="i in 12" :key="i" class="star-ray" :style="{
             transform: `rotate(${i * 30}deg)`,
           }" />
         </div>
 
-        <div class="mb-6 p-4 rounded-lg" :class="isTop1
+        <div class="mb-6 p-4 rounded-lg" :class="appMode.mode === 'hotseat' && isTop1
           ? 'bg-amber-50 border-2 border-amber-400 shadow-lg shadow-amber-200/50 top1-glow'
           : 'bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700'"
         >
-          <p v-if="isTop1" class="text-3xl font-black mb-2 top1-text">
-            UUSI ENNÄTYS!
-          </p>
-          <p v-else-if="celebrating" class="text-2xl font-bold text-amber-600 mb-2 celebrate-text">
-            TOP {{ playerNames().some((n) => n.toLowerCase() === 'akseli') ? 30 : 10 }}!
-          </p>
-          <p v-if="game.players.length === 1" class="text-xl font-bold text-green-800 dark:text-green-300">
-            Peli ohi! Pisteet: {{ game.totalScore(game.players[0]!) }}
-          </p>
-          <template v-else>
+          <template v-if="appMode.mode === 'online'">
             <p class="text-xl font-bold text-green-800 dark:text-green-300 mb-3">
-              {{ game.winner?.name }} voittaa pistein {{ game.totalScore(game.winner!) }}!
+              {{ onlineGame.winner?.name }} voittaa pistein {{ onlineGame.winner ? onlineGame.totalScore(onlineGame.winner) : 0 }}!
             </p>
             <div class="space-y-1 text-sm text-slate-600 dark:text-slate-300">
-              <p v-for="player in game.players" :key="player.name">
-                {{ player.name }}: {{ game.totalScore(player) }}
+              <p v-for="player in onlineGame.players" :key="player.uid">
+                {{ player.name }}: {{ onlineGame.totalScore(player) }}{{ player.conceded ? ' (luovuttanut)' : '' }}
               </p>
             </div>
           </template>
+          <template v-else>
+            <p v-if="isTop1" class="text-3xl font-black mb-2 top1-text">UUSI ENNÄTYS!</p>
+            <p v-else-if="celebrating" class="text-2xl font-bold text-amber-600 mb-2 celebrate-text">
+              TOP {{ playerNames().some((n) => n.toLowerCase() === 'akseli') ? 30 : 10 }}!
+            </p>
+            <p v-if="game.players.length === 1" class="text-xl font-bold text-green-800 dark:text-green-300">
+              Peli ohi! Pisteet: {{ game.totalScore(game.players[0]!) }}
+            </p>
+            <template v-else>
+              <p class="text-xl font-bold text-green-800 dark:text-green-300 mb-3">
+                {{ game.winner?.name }} voittaa pistein {{ game.totalScore(game.winner!) }}!
+              </p>
+              <div class="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                <p v-for="player in game.players" :key="player.name">
+                  {{ player.name }}: {{ game.totalScore(player) }}
+                </p>
+              </div>
+            </template>
+          </template>
         </div>
 
-        <!-- Show final scorecard -->
+        <!-- Final scorecard -->
         <section class="flex justify-center mb-6">
           <Scorecard />
         </section>
 
         <div class="mb-6">
-          <p v-if="!scoresSaved" class="text-slate-500 dark:text-slate-400 text-sm">Tallennetaan...</p>
-          <p v-else-if="scoreQueued" class="text-amber-600 dark:text-amber-400 text-sm">
+          <p v-if="appMode.mode === 'hotseat' && !scoresSaved" class="text-slate-500 dark:text-slate-400 text-sm">
+            Tallennetaan...
+          </p>
+          <p v-else-if="appMode.mode === 'hotseat' && scoreQueued" class="text-amber-600 dark:text-amber-400 text-sm">
             Ei verkkoyhteyttä -- pisteet lähetetään kun yhteys palaa
           </p>
-          <HighScores v-if="scoresSaved && !scoreQueued" :highlight-ids="savedDocIds" :player-names="playerNames()" />
+          <HighScores
+            v-if="appMode.mode === 'online' || (scoresSaved && !scoreQueued)"
+            :highlight-ids="appMode.mode === 'online' ? [] : savedDocIds"
+            :player-names="appMode.mode === 'online' ? onlineGame.players.map(p => p.name) : playerNames()"
+          />
         </div>
 
         <div class="flex gap-3 justify-center">
           <button
-            class="px-6 py-3 bg-green-600 dark:bg-green-700 text-white font-bold rounded-lg text-lg
-                   hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
+            v-if="appMode.mode === 'hotseat'"
+            class="px-6 py-3 bg-green-600 dark:bg-green-700 text-white font-bold rounded-lg text-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
             @click="game.restartGame()"
-          >
-            Pelaa uudelleen
-          </button>
+          >Pelaa uudelleen</button>
           <button
-            class="px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-lg
-                   hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
-            @click="game.newGame()"
-          >
-            Vaihda pelaajia
-          </button>
+            class="px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-lg text-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+            @click="appMode.mode === 'online'
+              ? (onlineGame.leaveGame(), appMode.setMode('hotseat'), showModeSelect = true)
+              : game.newGame()"
+          >{{ appMode.mode === 'online' ? 'Takaisin etusivulle' : 'Vaihda pelaajia' }}</button>
         </div>
       </div>
     </div>
