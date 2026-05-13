@@ -152,3 +152,70 @@ describe('onlineGame store: startGame', () => {
     expect(data.turnsPlayed).toBe(0)
   })
 })
+
+describe('onlineGame store: rollDice & toggleLock', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  function setupActive(s: ReturnType<typeof useOnlineGameStore>) {
+    ;(s.profile ??= undefined) // ensure profile-store is initialised in this test
+    // Seed profile uid via useProfileStore — same pattern as D4 startGame test
+    const profile = useProfileStore() as any
+    profile.uid = 'mock-uid'
+    ;(s as any).gameId = 'g1'
+    ;(s as any).hostUid = 'mock-uid'
+    s.players = [{ uid: 'mock-uid', name: 'A', scores: new Map(), conceded: false }]
+    s.phase = 'playing'
+    s.dice = Array.from({ length: 5 }, () => ({ value: 1, locked: false }))
+    s.rollsLeft = 3
+    s.currentPlayerIndex = 0
+  }
+
+  it('rollDice ei tee mitään jos ei ole oma vuoro', async () => {
+    const s = useOnlineGameStore()
+    setupActive(s)
+    s.players = [{ uid: 'someone-else', name: 'X', scores: new Map(), conceded: false }]
+    s.currentPlayerIndex = 0
+    await s.rollDice()
+    expect(vi.mocked(firestore.updateDoc)).not.toHaveBeenCalled()
+  })
+
+  it('rollDice arpoo lukitsemattomat nopat ja vähentää rollsLeft', async () => {
+    const s = useOnlineGameStore()
+    setupActive(s)
+    s.dice[0]!.locked = true
+    s.dice[0]!.value = 6
+    vi.mocked(firestore.updateDoc).mockResolvedValueOnce(undefined)
+    await s.rollDice()
+    const callArgs = vi.mocked(firestore.updateDoc).mock.calls[0]!
+    const data = callArgs[1] as any
+    expect(data.rollsLeft).toBe(2)
+    expect(data.dice[0]).toEqual({ value: 6, locked: true })
+    for (const d of data.dice) {
+      expect(d.value).toBeGreaterThanOrEqual(1)
+      expect(d.value).toBeLessThanOrEqual(6)
+    }
+  })
+
+  it('toggleLock ei toimi ennen ensimmäistä heittoa', async () => {
+    const s = useOnlineGameStore()
+    setupActive(s)
+    s.rollsLeft = 3 // hasRolled === false
+    await s.toggleLock(0)
+    expect(vi.mocked(firestore.updateDoc)).not.toHaveBeenCalled()
+  })
+
+  it('toggleLock vaihtaa lukon tilan', async () => {
+    const s = useOnlineGameStore()
+    setupActive(s)
+    s.rollsLeft = 2 // already rolled once
+    s.dice[2]!.locked = false
+    vi.mocked(firestore.updateDoc).mockResolvedValueOnce(undefined)
+    await s.toggleLock(2)
+    const callArgs = vi.mocked(firestore.updateDoc).mock.calls[0]!
+    const data = callArgs[1] as any
+    expect(data.dice[2].locked).toBe(true)
+  })
+})

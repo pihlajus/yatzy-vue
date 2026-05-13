@@ -8,9 +8,11 @@ import {
   MAX_ROLLS,
   MAX_PLAYERS,
   MIN_PLAYERS_TO_START,
+  ALL_CATEGORIES,
   type GameDoc,
   type Die,
 } from '../types/game'
+import { calcScore } from '../scoring'
 import {
   toLocalPlayer,
   toFirestorePlayer,
@@ -68,6 +70,8 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     return doc(db, 'games', gameId.value)
   }
 
+  function rollD6(): number { return Math.floor(Math.random() * 6) + 1 }
+
   function shuffle<T>(arr: T[]): T[] {
     const a = [...arr]
     for (let i = a.length - 1; i > 0; i--) {
@@ -86,8 +90,17 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
   function lowerSum(p: LocalOnlinePlayer) { return calcLowerSum(p) }
   function totalScore(p: LocalOnlinePlayer) { return calcTotalScore(p) }
 
-  // potentialScores placeholder — filled in by D5
-  const potentialScores = computed(() => new Map<Category, number>())
+  const potentialScores = computed(() => {
+    if (!hasRolled.value || !currentPlayer.value) return new Map<Category, number>()
+    const result = new Map<Category, number>()
+    const values = dice.value.map(d => d.value)
+    for (const cat of ALL_CATEGORIES) {
+      if (!currentPlayer.value.scores.has(cat)) {
+        result.set(cat, calcScore(values, cat))
+      }
+    }
+    return result
+  })
 
   function _applyDocToState(d: GameDoc) {
     code.value = d.code
@@ -222,6 +235,31 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     })
   }
 
+  async function rollDice(): Promise<void> {
+    if (!isMyTurn.value || rollsLeft.value <= 0) return
+    const newDice = dice.value.map(d => d.locked ? { ...d } : { value: rollD6(), locked: false })
+    const allSame = newDice.every(d => d.value === newDice[0]!.value)
+    const yatzyAlreadyScored = currentPlayer.value?.scores.has(Category.Yatzy) ?? false
+    await updateDoc(gameRef(), {
+      dice: newDice,
+      rollsLeft: rollsLeft.value - 1,
+      lastYatzy: allSame && !yatzyAlreadyScored,
+      lastBonus: false,
+      updatedAt: serverTimestamp(),
+    })
+  }
+
+  async function toggleLock(index: number): Promise<void> {
+    if (!isMyTurn.value || !hasRolled.value || rollsLeft.value <= 0) return
+    const newDice = dice.value.map((d, i) =>
+      i === index ? { ...d, locked: !d.locked } : { ...d },
+    )
+    await updateDoc(gameRef(), {
+      dice: newDice,
+      updatedAt: serverTimestamp(),
+    })
+  }
+
   return {
     // state
     gameId, connectionState, errorMessage,
@@ -232,6 +270,6 @@ export const useOnlineGameStore = defineStore('onlineGame', () => {
     // methods
     upperSum, upperBonus, lowerSum, totalScore,
     subscribe, unsubscribeAll, _applyDocToState,
-    createGame, leaveGame, joinGame, startGame,
+    createGame, leaveGame, joinGame, startGame, rollDice, toggleLock,
   }
 })
