@@ -24,11 +24,14 @@ const shakePermissionNeeded = ref(false)
 
 const canRoll = computed(() => game.rollsLeft > 0 && !game.isGameOver && game.canInteract)
 
-function roll() {
+async function roll() {
   if (rolling.value) return
   if (!game.canInteract) return
-  game.roll()
   playRoll()
+  // Await so the online roll's Firestore write applies and the store's dice
+  // values update before rolling=true triggers Die to snapshot props.value.
+  // Hot-seat's roll() is sync; awaiting a non-Promise resolves immediately.
+  await game.roll()
   rolling.value = true
   setTimeout(() => { rolling.value = false }, 1100)
 }
