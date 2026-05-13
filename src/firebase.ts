@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore'
-import { getAuth, signInAnonymously, onAuthStateChanged, type User } from 'firebase/auth'
+import { type Auth, getAuth, signInAnonymously, onAuthStateChanged, type User } from 'firebase/auth'
 
 const app = initializeApp({
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -9,21 +9,28 @@ const app = initializeApp({
 })
 
 export const db = getFirestore(app)
-export const auth = getAuth(app)
+
+// Lazy: getAuth() triggers browser-only init that breaks jsdom tests importing
+// this module. Tests needing auth must mock firebase/auth.
+let _auth: Auth | null = null
+export function auth(): Auth {
+  return (_auth ??= getAuth(app))
+}
 
 let signInPromise: Promise<User> | null = null
 
 export function ensureSignedIn(): Promise<User> {
-  if (auth.currentUser) return Promise.resolve(auth.currentUser)
+  const a = auth()
+  if (a.currentUser) return Promise.resolve(a.currentUser)
   if (signInPromise) return signInPromise
   signInPromise = new Promise<User>((resolve, reject) => {
-    const unsub = onAuthStateChanged(auth, (user) => {
+    const unsub = onAuthStateChanged(a, (user) => {
       if (user) {
         unsub()
         resolve(user)
       }
     })
-    signInAnonymously(auth).catch((err) => {
+    signInAnonymously(a).catch((err) => {
       unsub()
       signInPromise = null
       reject(err)
