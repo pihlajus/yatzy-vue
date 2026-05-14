@@ -43,7 +43,7 @@ async function confirmConcede(uid: string) {
           class="ml-1 text-xs px-1.5 py-0.5 rounded bg-red-500 text-white"
           @click="confirmConcede(p.uid)"
         >
-          {{ confirmingFor === p.uid ? 'Varma?' : 'Luovuta' }}
+          {{ confirmingFor === p.uid ? 'Varma?' : 'Potkaise' }}
         </button>
       </li>
     </ul>
