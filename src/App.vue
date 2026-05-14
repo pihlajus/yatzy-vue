@@ -107,13 +107,19 @@ onUnmounted(() => {
   onlineGame.unsubscribeAll()
 })
 
+function triggerYatzyShake() {
+  setTimeout(() => {
+    screenShake.value = true
+    setTimeout(() => { screenShake.value = false }, 500)
+  }, 1000)
+}
+
 watch(() => game.lastYatzy, (isYatzy) => {
-  if (isYatzy) {
-    setTimeout(() => {
-      screenShake.value = true
-      setTimeout(() => { screenShake.value = false }, 500)
-    }, 1000)
-  }
+  if (isYatzy) triggerYatzyShake()
+})
+
+watch(() => onlineGame.lastYatzy, (isYatzy) => {
+  if (isYatzy) triggerYatzyShake()
 })
 
 watch(() => game.phase, async (phase) => {
