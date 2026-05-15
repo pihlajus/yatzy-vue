@@ -2,21 +2,32 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useActiveGame } from '../composables/useActiveGame'
 import { useSound } from '../composables/useSound'
+import { useSettings } from '../composables/useSettings'
 import { useShake } from '../composables/useShake'
 import Die from './Die.vue'
 
 const game = useActiveGame()
-const { playRoll, playBoom } = useSound()
+const { playRoll } = useSound()
+const { soundEnabled } = useSettings()
 const rolling = ref(false)
 const exploding = ref(false)
+const explosionVideo = ref<HTMLVideoElement | null>(null)
+const BASE = import.meta.env.BASE_URL
+const explosionWebm = `${BASE}videos/explosion.webm`
+const explosionMp4 = `${BASE}videos/explosion.mp4`
 
 watch(() => game.lastYatzy, (isYatzy) => {
   if (isYatzy) {
     // Wait for dice animation (900ms) to finish before exploding
     setTimeout(() => {
       exploding.value = true
-      playBoom()
-      setTimeout(() => { exploding.value = false }, 2000)
+      const vid = explosionVideo.value
+      if (vid) {
+        vid.currentTime = 0
+        vid.muted = !soundEnabled.value
+        vid.play().catch(() => {})
+      }
+      setTimeout(() => { exploding.value = false }, 2500)
     }, 1000)
   }
 })
@@ -38,6 +49,7 @@ async function roll() {
 
 const {
   supported: shakeSupported,
+  permissionGranted: shakeGranted,
   requestPermission: requestShakePermission,
 } = useShake(() => {
   if (canRoll.value && !rolling.value) roll()
@@ -45,13 +57,18 @@ const {
 
 onMounted(() => {
   if (shakeSupported) {
-    const DME = DeviceMotionEvent as unknown as {
-      requestPermission?: () => Promise<string>
-    }
-    if (DME.requestPermission) {
-      shakePermissionNeeded.value = true
-    } else {
+    if (shakeGranted.value) {
+      // Already granted from a previous mount — just re-attach listener
       requestShakePermission()
+    } else {
+      const DME = DeviceMotionEvent as unknown as {
+        requestPermission?: () => Promise<string>
+      }
+      if (DME.requestPermission) {
+        shakePermissionNeeded.value = true
+      } else {
+        requestShakePermission()
+      }
     }
   }
 })
@@ -64,12 +81,19 @@ async function grantShake() {
 
 <template>
   <div class="relative flex flex-col items-center gap-4">
-    <!-- Yatzy explosion -->
-    <div v-if="exploding" class="yatzy-explosion" aria-hidden="true">
-      <div class="shockwave" />
-      <div class="shockwave shockwave-delayed" />
-      <div class="flash" />
-    </div>
+    <!-- Yatzy explosion video -->
+    <video
+      ref="explosionVideo"
+      class="explosion-video"
+      :class="{ 'explosion-visible': exploding }"
+      playsinline
+      preload="auto"
+      aria-hidden="true"
+      @ended="exploding = false"
+    >
+      <source :src="explosionWebm" type="video/webm">
+      <source :src="explosionMp4" type="video/mp4">
+    </video>
 
     <div class="flex gap-3" :class="{ 'yatzy-bounce': exploding }">
       <Die
@@ -120,70 +144,21 @@ async function grantShake() {
 </template>
 
 <style scoped>
-.yatzy-explosion {
+.explosion-video {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  width: 350px;
+  height: 350px;
+  object-fit: cover;
   pointer-events: none;
   z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  opacity: 0;
 }
 
-.shockwave {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 4px solid #ef4444;
-  animation: shockwave-expand 1.8s ease-out forwards;
-}
-
-.shockwave-delayed {
-  animation-delay: 0.2s;
-  border-color: #f97316;
-}
-
-.flash {
-  position: absolute;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(251, 191, 36, 0.6), transparent 70%);
-  animation: flash-pulse 0.4s ease-out forwards;
-}
-
-@keyframes shockwave-expand {
-  0% {
-    width: 10px;
-    height: 10px;
-    opacity: 1;
-    border-width: 4px;
-    border-color: #ef4444;
-  }
-  40% {
-    border-color: #f97316;
-  }
-  100% {
-    width: 280px;
-    height: 280px;
-    opacity: 0;
-    border-width: 1px;
-    border-color: #fbbf24;
-  }
-}
-
-@keyframes flash-pulse {
-  0% {
-    transform: scale(0.5);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(3);
-    opacity: 0;
-  }
+.explosion-visible {
+  opacity: 1;
 }
 
 .yatzy-bounce {

@@ -3,10 +3,14 @@ import { ref, onUnmounted } from 'vue'
 const THRESHOLD = 12
 const COOLDOWN_MS = 1000
 
+// Persist iOS motion permission across component remounts so users don't
+// have to re-grant on every navigation.
+let globalPermissionGranted = false
+
 export function useShake(onShake: () => void) {
   let lastShake = 0
   const supported = typeof DeviceMotionEvent !== 'undefined'
-  const permissionGranted = ref(false)
+  const permissionGranted = ref(globalPermissionGranted)
 
   function handleMotion(e: DeviceMotionEvent) {
     // Prefer acceleration (without gravity) if available
@@ -25,6 +29,7 @@ export function useShake(onShake: () => void) {
   }
 
   function startListening() {
+    globalPermissionGranted = true
     permissionGranted.value = true
     window.addEventListener('devicemotion', handleMotion)
   }
